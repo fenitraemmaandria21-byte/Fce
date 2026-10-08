@@ -1,0 +1,93 @@
+import { Fragment } from 'react'
+import { Link, Outlet, useLocation } from 'react-router-dom'
+
+import AppSidebar from '@/components/layout/AppSidebar'
+import { Badge } from '@/components/ui/badge'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
+import { Separator } from '@/components/ui/separator'
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { useAuth } from '@/context/AuthContext'
+
+const LIBELLES_PAGES = {
+  '/': 'Tableau de bord',
+  '/statistiques': 'Statistiques',
+  '/journal': 'Journal d’activité',
+  '/gares': 'Gares',
+  '/arrets': 'Arrêts',
+  '/tarifs': 'Tarifs',
+  '/trains': 'Trains',
+  '/voitures': 'Voitures',
+  '/wagons': 'Wagons',
+  '/billets': 'Billets',
+  '/marchandises': 'Envois de marchandises',
+  '/arrivages': 'Arrivages',
+  '/locations': 'Locations',
+  '/bran': 'BRAN',
+  '/rfe': 'RFE',
+  '/utilisateurs': 'Utilisateurs',
+  '/clients': 'Clients',
+  '/parametres': 'Paramètres',
+}
+
+function FilAriane() {
+  const { pathname } = useLocation()
+  const libelle = LIBELLES_PAGES[pathname] || 'Page introuvable'
+  const estAccueil = pathname === '/'
+
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          {estAccueil ? (
+            <BreadcrumbPage>Tableau de bord</BreadcrumbPage>
+          ) : (
+            <BreadcrumbLink asChild>
+              <Link to="/">Tableau de bord</Link>
+            </BreadcrumbLink>
+          )}
+        </BreadcrumbItem>
+        {!estAccueil && (
+          <Fragment>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{libelle}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </Fragment>
+        )}
+      </BreadcrumbList>
+    </Breadcrumb>
+  )
+}
+
+export default function AppLayout() {
+  const { utilisateur } = useAuth()
+
+  return (
+    <TooltipProvider delayDuration={0}>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+            <SidebarTrigger />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <FilAriane />
+            <div className="ml-auto flex items-center gap-2">
+              <Badge variant="outline">{utilisateur?.role}</Badge>
+            </div>
+          </header>
+          <main className="flex flex-1 flex-col gap-6 p-6">
+            <Outlet />
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
+  )
+}

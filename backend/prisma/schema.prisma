@@ -1,0 +1,540 @@
+// ============================================================
+// FCE-SI — Schéma Prisma (Phase 4 : modèle de données initial)
+// PostgreSQL
+//
+// RÈGLE ABSOLUE : ne jamais inventer de donnée métier.
+// Toute règle / tarif / numéro non validé est marqué :
+//   CONFIGURATION_A_VALIDER | REGLE_A_CONFIRMER | TODO_METIER
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------------
+
+// Les 3 seuls rôles autorisés (aucun autre rôle ne doit être créé).
+enum Role {
+  SUPERADMIN
+  ADMIN
+  AGENT
+}
+
+// Classe de billet — libellés FCE validés.
+enum ClasseBillet {
+  PREMIERE_CLASSE
+  RESERVATION_RESIDENT
+  RESERVATION_NON_RESIDENT
+}
+
+// Pièce d'identité : résident → CIN, non-résident → passeport.
+enum TypeIdentite {
+  CIN
+  PASSEPORT
+}
+
+// Règle validée : enfant < 12 ans → demi-tarif (montant = CONFIGURATION_A_VALIDER).
+enum CategorieVoyageur {
+  ADULTE
+  ENFANT
+}
+
+enum StatutBillet {
+  VENDU
+  ANNULE
+}
+
+// Types de location gérés par le responsable métier.
+enum TypeLocation {
+  DRAISINE
+  MACHINE // micheline / machine
+  BATIMENT
+  TERRAIN
+}
+
+// Formules machine documentées : < 6 heures ou journée (06:30 → 18:00).
+enum FormuleMachine {
+  MOINS_6H
+  JOURNEE
+}
+
+enum StatutLocation {
+  EN_ATTENTE
+  VALIDEE
+  REFUSEE
+}
+
+// Processus marchandises : envoi → facturation → BRAN → arrivage → remise.
+enum StatutEnvoi {
+  ENREGISTRE
+  FACTURE
+  ARRIVE
+  REMIS
+}
+
+enum StatutArrivage {
+  EN_ATTENTE
+  RECUE
+  ANOMALIE
+}
+
+// ------------------------------------------------------------
+// RÉFÉRENTIELS FCE
+// ------------------------------------------------------------
+
+model Zone {
+  id       String         @id @default(cuid())
+  code     String         @unique // Z1 | Z2 | Z3 | Z4
+  gares    Gare[]
+  tarifs   TarifBillet[]
+  tarifsLocation TarifLocation[]
+  locations Location[]
+  billets  Billet[]
+  // Arret.zoneGeographique / zoneTarif sont des marqueurs libres ("Z2/3",
+  // CONFIGURATION_A_VALIDER) : pas de clé étrangère possible.
+
+  @@map("zones")
+}
+
+model Gare {
+  id        String   @id @default(cuid())
+  code      String   @unique // FIA, VHM, SBV...
+  nom       String? // null = nom non fourni dans les données FCE (TODO_METIER)
+  pk        Int      @unique // PK480 → PK497
+  zoneId    String
+  zone      Zone     @relation(fields: [zoneId], references: [id])
+
+  billets            Billet[]  @relation("BilletDestination")
+  envoisOrigine      Envoi[]   @relation("EnvoiOrigine")
+  envoisDestination  Envoi[]   @relation("EnvoiDestination")
+  arrivages          Arrivage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([zoneId])
+  @@map("gares")
+}
+
+model Arret {
+  id     String  @id @default(cuid())
+  libelle String  @unique // "PK67 Tolongoina–Amboanjobe"
+  pk     Int     @unique
+  // PK91 : géographie Z2/3, tarif Z3. PK67/102/115/123 : À VALIDER.
+  zoneGeographique String // "Z2/3" ou CONFIGURATION_A_VALIDER
+  zoneTarif         String // "Z3"  ou CONFIGURATION_A_VALIDER
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("arrets")
+}
+
+// Tarifs billets validés (Ar) — destination → zone → type → classe → tarif.
+model TarifBillet {
+  id      String        @id @default(cuid())
+  zoneId  String
+  zone    Zone          @relation(fields: [zoneId], references: [id])
+  classe  ClasseBillet
+  montant Int // Ariary
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([zoneId, classe])
+  @@map("tarifs_billet")
+}
+
+// Tarifs location validés (Ar).
+// Draisine : par zone. Machine : par formule (cle).
+// Bâtiment / Terrain : aucun tarif → CONFIGURATION_A_VALIDER.
+model TarifLocation {
+  id     String        @id @default(cuid())
+  type   TypeLocation
+  zoneId String?
+  zone   Zone?         @relation(fields: [zoneId], references: [id])
+  cle    String? // "MOINS_6H" | "JOURNEE" (formule machine)
+  montant Int // Ariary
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, zoneId, cle])
+  @@map("tarifs_location")
+}
+
+model Train {
+  id          String   @id @default(cuid())
+  numero      String   @unique // "4451", "4452"
+  origine     String   // "Fianarantsoa"
+  destination String   // "Manakara"
+  jours       String[] // ["mardi","samedi"]
+
+  voitures  Voiture[]
+  billets   Billet[]
+  arrivages Arrivage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("trains")
+}
+
+// Voitures voyageurs — capacité de référence (352 places au total).
+model Voiture {
+  id      String        @id @default(cuid())
+  code    String        @unique // BT506, AT202, A012...
+  places  Int
+  classe  ClasseBillet
+  trainId String? // non renseigné tant que l'affectation officielle n'est pas validée
+  train   Train?        @relation(fields: [trainId], references: [id])
+
+  billets Billet[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("voitures")
+}
+
+// Wagons marchandises — capacité par wagon (≠ capacité maximale du train,
+// qui reste configurable : TODO_METIER).
+model Wagon {
+  id             String @id @default(cuid())
+  code           String @unique // "K30 122"
+  typeWagon      String // "K30" | "DKP15" | "DKP30" (dérivé des données sources)
+  serie          Int // 100 | 400
+  capaciteTonnes Int // 20 | 25
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("wagons")
+}
+
+// ------------------------------------------------------------
+// PARAMÈTRES SYSTÈME (SUPERADMIN)
+// Utilisés pour stocker les règles en attente de validation.
+// ------------------------------------------------------------
+
+model ParametreSysteme {
+  cle         String  @id // ex. "REGLE_ANNULATION_BILLET"
+  valeur      String // CONFIGURATION_A_VALIDER par défaut
+  description String?
+  modifieParId String?
+  modifiePar  User?   @relation(fields: [modifieParId], references: [id])
+
+  updatedAt DateTime @updatedAt
+
+  @@map("parametres_systeme")
+}
+
+// ------------------------------------------------------------
+// UTILISATEURS
+// ------------------------------------------------------------
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  nom         String
+  motDePasse  String // hash bcrypt — jamais en clair
+  role        Role     @default(AGENT)
+  actif       Boolean  @default(true)
+
+  billetsCrees        Billet[]           @relation("BilletAgent")
+  billetsAnnules      Billet[]           @relation("BilletAnnulePar")
+  envoisCrees         Envoi[]            @relation("EnvoiCreePar")
+  arrivagesCrees      Arrivage[]         @relation("ArrivageCreePar")
+  locationsCrees      Location[]         @relation("LocationCreePar")
+  locationsValidees   Location[]         @relation("LocationValidePar")
+  branCrees           Bran[]             @relation("BranCreePar")
+  rfeCrees            Rfe[]              @relation("RfeCreePar")
+  journal             JournalActivite[]
+  parametresModifies  ParametreSysteme[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("utilisateurs")
+}
+
+// ------------------------------------------------------------
+// BILLETTERIE
+// ------------------------------------------------------------
+
+model Billet {
+  id     String @id @default(cuid())
+  // Règle de numérotation non validée → REGLE_A_CONFIRMER (généré en Phase 9).
+  numero String? @unique
+
+  voyageurNom      String
+  voyageurIdentite String // N° CIN ou passeport
+  typeIdentite     TypeIdentite
+  categorie        CategorieVoyageur @default(ADULTE)
+
+  destinationId String
+  destination   Gare   @relation("BilletDestination", fields: [destinationId], references: [id])
+  zoneId        String
+  zone          Zone   @relation(fields: [zoneId], references: [id])
+  classe        ClasseBillet
+  tarif         Int // montant appliqué (Ar) — enfant = CONFIGURATION_A_VALIDER
+
+  dateVoyage DateTime
+  trainId     String?
+  train       Train?  @relation(fields: [trainId], references: [id])
+  voitureId   String?
+  voiture     Voiture? @relation(fields: [voitureId], references: [id])
+  place       String? // gestion des places : Phase 9
+
+  statut   StatutBillet @default(VENDU)
+  annuleParId String?
+  annulePar   User?     @relation("BilletAnnulePar", fields: [annuleParId], references: [id])
+  annuleLe    DateTime?
+
+  creeParId String
+  creePar   User   @relation("BilletAgent", fields: [creeParId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dateVoyage])
+  @@index([statut])
+  @@index([destinationId])
+  @@index([creeParId])
+  @@map("billets")
+}
+
+// ------------------------------------------------------------
+// MARCHANDISES
+// ------------------------------------------------------------
+
+model Envoi {
+  id        String      @id @default(cuid())
+  reference String? @unique // règle de référence = REGLE_A_CONFIRMER
+  dateEnvoi DateTime    @default(now())
+
+  gareOrigineId     String?
+  gareOrigine       Gare?   @relation("EnvoiOrigine", fields: [gareOrigineId], references: [id])
+  gareDestinationId String?
+  gareDestination   Gare?   @relation("EnvoiDestination", fields: [gareDestinationId], references: [id])
+
+  expediteurNom      String
+  expediteurContact  String?
+  destinataireNom    String
+  destinataireContact String?
+
+  nombreColis Int
+  poidsTotal  Decimal? @db.Decimal(12, 3)
+  statut      StatutEnvoi @default(ENREGISTRE)
+  factureNumero String? // N° facture — distinct du BRAN et du RFE
+  observations String?
+
+  lignes    LigneMarchandise[]
+  arrivages Arrivage[]
+  bran      Bran?
+
+  creeParId String
+  creePar   User   @relation("EnvoiCreePar", fields: [creeParId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([statut])
+  @@index([dateEnvoi])
+  @@map("envois")
+}
+
+model LigneMarchandise {
+  id      String @id @default(cuid())
+  envoiId String
+  envoi   Envoi  @relation(fields: [envoiId], references: [id], onDelete: Cascade)
+
+  categorie   String // catégorie libre (saisie agent)
+  designation String
+  quantite    Decimal? @db.Decimal(12, 3)
+  unite       String?
+  poids       Decimal? @db.Decimal(12, 3)
+  marque      String?
+  observation String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([envoiId])
+  @@map("lignes_marchandise")
+}
+
+// ------------------------------------------------------------
+// ARRIVAGES
+// ------------------------------------------------------------
+
+model Arrivage {
+  id      String   @id @default(cuid())
+  envoiId String
+  envoi   Envoi    @relation(fields: [envoiId], references: [id])
+
+  trainId String?
+  train   Train?   @relation(fields: [trainId], references: [id])
+  gareId  String?
+  gare    Gare?    @relation(fields: [gareId], references: [id])
+
+  dateArrivage DateTime
+  statut       StatutArrivage @default(EN_ATTENTE)
+  observations String?
+
+  creeParId String
+  creePar   User   @relation("ArrivageCreePar", fields: [creeParId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([statut])
+  @@index([dateArrivage])
+  @@map("arrivages")
+}
+
+// ------------------------------------------------------------
+// LOCATION
+// ------------------------------------------------------------
+
+model Client {
+  id      String  @id @default(cuid())
+  nom     String
+  contact String?
+  adresse String?
+
+  locations Location[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("clients")
+}
+
+model Location {
+  id       String       @id @default(cuid())
+  clientId String
+  client   Client       @relation(fields: [clientId], references: [id])
+
+  type   TypeLocation
+  zoneId String?
+  zone   Zone?         @relation(fields: [zoneId], references: [id])
+
+  depart        String? // machine : "Fianarantsoa" | "Sahambavy"
+  formule       FormuleMachine? // machine : MOINS_6H | JOURNEE
+  allerRetour   Boolean  @default(false) // draisine : tarif aller simple × 2
+  personnes     Int // capacité max : draisine 15, machine 19 (CONFIGURATION_A_VALIDER pour les autres)
+
+  dateDebut DateTime
+  dateFin   DateTime?
+
+  montant Int? // null = CONFIGURATION_A_VALIDER (bâtiment / terrain)
+
+  statut       StatutLocation @default(EN_ATTENTE)
+  observations String?
+
+  valideParId String?
+  validePar   User?   @relation("LocationValidePar", fields: [valideParId], references: [id])
+  creeParId   String
+  creePar     User    @relation("LocationCreePar", fields: [creeParId], references: [id])
+
+  rfe Rfe?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([statut])
+  @@index([type])
+  @@index([dateDebut])
+  @@map("locations")
+}
+
+// ------------------------------------------------------------
+// DOCUMENTS : BRAN (Bulletin des Recettes Annexes du Transport)
+// ------------------------------------------------------------
+
+model Bran {
+  id     String  @id @default(cuid())
+  numero String? @unique // numérotation = REGLE_A_CONFIRMER
+  dateBran DateTime @default(now())
+
+  envoiId String? @unique
+  envoi   Envoi?  @relation(fields: [envoiId], references: [id])
+
+  montantTotal Int // somme des lignes (Ar)
+  lignes       LigneBran[]
+
+  creeParId String
+  creePar   User   @relation("BranCreePar", fields: [creeParId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("bran")
+}
+
+model LigneBran {
+  id     String @id @default(cuid())
+  branId String
+  bran   Bran   @relation(fields: [branId], references: [id], onDelete: Cascade)
+
+  designation String?
+  montant     Int
+  observation String?
+
+  @@index([branId])
+  @@map("lignes_bran")
+}
+
+// ------------------------------------------------------------
+// DOCUMENTS : RFE (facturation liée à la LOCATION uniquement)
+// ------------------------------------------------------------
+
+model Rfe {
+  id     String  @id @default(cuid())
+  numero String? @unique // N° RFE
+  factureNumero String? @unique // N° facture (distinct)
+  recuNumero    String? @unique // N° reçu (distinct)
+
+  locationId String @unique
+  location   Location @relation(fields: [locationId], references: [id])
+
+  dateRfe DateTime @default(now())
+  montant Int
+
+  creeParId String
+  creePar   User   @relation("RfeCreePar", fields: [creeParId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("rfe")
+}
+
+// ------------------------------------------------------------
+// HISTORIQUE
+// ------------------------------------------------------------
+
+model JournalActivite {
+  id            String  @id @default(cuid())
+  utilisateurId String?
+  utilisateur   User?   @relation(fields: [utilisateurId], references: [id])
+
+  action  String // ex. "CREATION_BILLET"
+  entite  String // ex. "Billet"
+  entiteId String?
+  details Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entite, entiteId])
+  @@map("journal_activite")
+}
