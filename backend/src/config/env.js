@@ -13,6 +13,7 @@ const env = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 };
 
+
 function assertEnv() {
   const missing = [];
   if (!env.databaseUrl) missing.push('DATABASE_URL');
