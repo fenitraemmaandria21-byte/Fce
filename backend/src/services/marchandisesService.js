@@ -1,6 +1,7 @@
 const { getPrisma } = require('../config/database');
 const { ApiError } = require('../utils/ApiError');
 const { dbCall } = require('../utils/db');
+const { actif } = require('../utils/filtres');
 const { parsePagination, paginated } = require('../utils/pagination');
 const { journaliser } = require('../utils/journal');
 
@@ -166,8 +167,8 @@ async function lister(req) {
         { factureNumero: { contains: search, mode: 'insensitive' } },
       ];
     }
-    if (req.query.statut) where.statut = req.query.statut;
-    if (req.query.gare) {
+    if (actif(req.query.statut)) where.statut = req.query.statut;
+    if (actif(req.query.gare)) {
       where.gareDestination = {
         code: { equals: String(req.query.gare).toUpperCase() },
       };

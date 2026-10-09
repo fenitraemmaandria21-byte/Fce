@@ -8,8 +8,21 @@ const { journaliser } = require('../utils/journal');
 // BRAN — Bulletin des Recettes Annexes du Transport.
 // Document distinct du RFE. Un BRAN contient 1..n LIGNE_BRAN.
 // Format physique : 148,5 × 210 mm.
-// Numérotation : REGLE_A_CONFIRMER.
+// Numérotation validée : BRAN-<année>-<séquence annuelle à 6 chiffres>.
 // ------------------------------------------------------------
+
+// Génère un numéro séquentiel unique <préfixe>-<année>-<6 chiffres>.
+async function prochainNumero(prisma, modele, champ, prefixe) {
+  const annee = new Date().getUTCFullYear();
+  const tete = `${prefixe}-${annee}-`;
+  const dernier = await prisma[modele].findFirst({
+    where: { [champ]: { startsWith: tete } },
+    orderBy: { [champ]: 'desc' },
+    select: { [champ]: true },
+  });
+  const suivant = dernier ? parseInt(dernier[champ].slice(tete.length), 10) + 1 : 1;
+  return `${tete}${String(suivant).padStart(6, '0')}`;
+}
 
 // POST /api/bran
 async function creerBran(donnees, appelant) {
@@ -28,7 +41,7 @@ async function creerBran(donnees, appelant) {
     const bran = await prisma.$transaction(async (tx) => {
       const created = await tx.bran.create({
         data: {
-          numero: null, // REGLE_A_CONFIRMER
+          numero: await prochainNumero(tx, 'bran', 'numero', 'BRAN'),
           envoiId: donnees.envoiId || null,
           montantTotal,
           creeParId: appelant.id,
@@ -124,8 +137,7 @@ async function recupererBran(id) {
 // ------------------------------------------------------------
 // RFE — facturation liée à la LOCATION (≠ transport, ≠ BRAN).
 // Format physique : 105 × 148,5 mm.
-// N° RFE / N° facture / N° reçu distincts — numérotation
-// : REGLE_A_CONFIRMER.
+// Numérotation validée : RFE-/FAC-/REC-<année>-<séquence> distinctes.
 // ------------------------------------------------------------
 
 // POST /api/rfe
@@ -150,9 +162,9 @@ async function creerRfe(donnees, appelant) {
 
     const rfe = await prisma.rfe.create({
       data: {
-        numero: null, // REGLE_A_CONFIRMER
-        factureNumero: null, // REGLE_A_CONFIRMER
-        recuNumero: null, // REGLE_A_CONFIRMER
+        numero: await prochainNumero(prisma, 'rfe', 'numero', 'RFE'),
+        factureNumero: await prochainNumero(prisma, 'rfe', 'factureNumero', 'FAC'),
+        recuNumero: await prochainNumero(prisma, 'rfe', 'recuNumero', 'REC'),
         locationId: location.id,
         montant: location.montant, // montant de la location validée
         creeParId: appelant.id,

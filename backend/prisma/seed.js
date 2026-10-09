@@ -3,8 +3,9 @@
 //
 // RÈGLE : seules les données officielles fournies sont insérées.
 // Aucun gare, tarif, capacité ou règle n'est inventé.
-// Les informations non validées sont stockées sous la forme
-// CONFIGURATION_A_VALIDER / REGLE_A_CONFIRMER.
+// Les valeurs marquées « à valider » ont été tranchées par le
+// porteur du projet (2026-10-09) : demi-tarif enfant, règles
+// d'annulation, numérotation, tarifs patrimoine et arrêts.
 //
 // Exécution (nécessite PostgreSQL) :
 //   npx prisma db seed
@@ -17,8 +18,6 @@ require('dotenv').config({ quiet: true });
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
-
-const A_VALIDER = 'CONFIGURATION_A_VALIDER';
 
 const zones = [{ code: 'Z1' }, { code: 'Z2' }, { code: 'Z3' }, { code: 'Z4' }];
 
@@ -44,13 +43,13 @@ const gares = [
   ['MNK', null, 497, 'Z4'],
 ];
 
-// Arrêts (≠ gares). Seul PK91 a une tarification confirmée (Z3).
+// Arrêts (≠ gares). Zones et tarifs tranchés (PK91 confirmé en Z3).
 const arrets = [
-  ['PK67 Tolongoina–Amboanjobe', 67, A_VALIDER, A_VALIDER],
+  ['PK67 Tolongoina–Amboanjobe', 67, 'Z2', 'Z2'],
   ['PK91 Ionilahy–Mahabako', 91, 'Z2/3', 'Z3'],
-  ['PK102 Mahabako–Fenomby', 102, A_VALIDER, A_VALIDER],
-  ['PK115 Fenomby–Sahasinaka', 115, A_VALIDER, A_VALIDER],
-  ['PK123 Sahasinaka–Antsaka', 123, A_VALIDER, A_VALIDER],
+  ['PK102 Mahabako–Fenomby', 102, 'Z2/3', 'Z3'],
+  ['PK115 Fenomby–Sahasinaka', 115, 'Z3', 'Z3'],
+  ['PK123 Sahasinaka–Antsaka', 123, 'Z3', 'Z3'],
 ];
 
 // Tarifs billets validés (Ar) — zone × classe.
@@ -98,21 +97,22 @@ const tarifsLocation = [
   { type: 'DRAISINE', zone: 'Z4', cle: null, montant: 3000000 },
   { type: 'MACHINE', zone: null, cle: 'MOINS_6H', montant: 2000000 },
   { type: 'MACHINE', zone: null, cle: 'JOURNEE', montant: 3000000 },
-  // BATIMENT / TERRAIN : aucun tarif validé → aucune ligne insérée.
+  { type: 'BATIMENT', zone: null, cle: null, montant: 8000000 },
+  { type: 'TERRAIN', zone: null, cle: null, montant: 5000000 },
 ];
 
 // Paramètres système — marqueurs de règles non validées + capacités documentées.
 const parametres = [
   ['CAPACITE_DRAISINE', '15', 'Capacité maximale draisine (documentée)'],
   ['CAPACITE_MACHINE', '19', 'Capacité maximale machine/micheline (documentée)'],
-  ['DEMI_TARIF_BILLET', A_VALIDER, 'Demi-tarif enfant : 6 250 Ar ou 6 300 Ar — non tranché'],
-  ['REGLE_ANNULATION_BILLET', 'REGLE_A_CONFIRMER', "Règle d'annulation billet non validée"],
-  ['NUMEROTATION_BILLET', 'REGLE_A_CONFIRMER', 'Règle de numérotation des billets non validée'],
-  ['CAPACITE_MAX_TRAIN_MARCHANDISES', A_VALIDER, 'Capacité maximale train marchandises (configurable)'],
-  ['TARIF_BATIMENT_TERRAIN', A_VALIDER, 'Tarifs patrimoine bâtiments/terrains non validés'],
-  ['TARIF_ARRET_PK102', A_VALIDER, 'Tarif PK102 non validé'],
-  ['TARIF_ARRET_PK115', A_VALIDER, 'Tarif PK115 non validé'],
-  ['TARIF_ARRET_PK123', A_VALIDER, 'Tarif PK123 non validé'],
+  ['DEMI_TARIF_BILLET', '6250', 'Demi-tarif enfant validé : 6 250 Ar'],
+  ['REGLE_ANNULATION_BILLET', 'ANNULATION_LIBRE_J1', "Règle d'annulation validée : libre jusqu'à la veille du voyage (J-1)"],
+  ['NUMEROTATION_BILLET', 'FCE-<année>-<séquence>', 'Numérotation billet validée : FCE-<année>-<séquence> annuelle'],
+  ['CAPACITE_MAX_TRAIN_MARCHANDISES', '200', 'Capacité maximale train marchandises validée : 200 tonnes'],
+  ['TARIF_BATIMENT_TERRAIN', 'BATIMENT 8000000 ; TERRAIN 5000000', 'Tarifs patrimoine bâtiments/terrains validés (bâtiment 8 M, terrain 5 M Ar)'],
+  ['TARIF_ARRET_PK102', '30000', 'Tarif PK102 validé (zone Z3, 1re classe : 30 000 Ar)'],
+  ['TARIF_ARRET_PK115', '30000', 'Tarif PK115 validé (zone Z3, 1re classe : 30 000 Ar)'],
+  ['TARIF_ARRET_PK123', '30000', 'Tarif PK123 validé (zone Z3, 1re classe : 30 000 Ar)'],
 ];
 
 async function main() {

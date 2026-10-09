@@ -1,6 +1,7 @@
 const { getPrisma } = require('../config/database');
 const { ApiError } = require('../utils/ApiError');
 const { dbCall } = require('../utils/db');
+const { actif } = require('../utils/filtres');
 const { parsePagination, paginated } = require('../utils/pagination');
 const { journaliser } = require('../utils/journal');
 
@@ -12,7 +13,7 @@ const { journaliser } = require('../utils/journal');
 //   Machine  : < 6 h = 2 000 000 Ar ; journée = 3 000 000 Ar
 //              (départ ≥ 06:30, retour < 18:00) ; capacité max 19 pers.
 //              départs : Fianarantsoa, Sahambavy
-//   Bâtiment / Terrain : TARIF NON VALIDÉ → CONFIGURATION_A_VALIDER
+//   Bâtiment / Terrain : tarifs validés (bâtiment 8 M Ar ; terrain 5 M Ar)
 // ------------------------------------------------------------
 
 const DEPARTS_MACHINE = ['Fianarantsoa', 'Sahambavy'];
@@ -106,8 +107,17 @@ async function resoudreTarifLocation(prisma, donnees) {
     return tarif.montant;
   }
 
-  // BATIMENT / TERRAIN : aucun tarif validé.
-  return null; // → montant null = CONFIGURATION_A_VALIDER
+  // BATIMENT / TERRAIN : tarif unique validé (la zone n'est pas collectée au formulaire).
+  if (type === 'BATIMENT' || type === 'TERRAIN') {
+    const tarif = await prisma.tarifLocation.findFirst({
+      where: { type, zoneId: null, cle: null },
+    });
+    if (!tarif) throw new ApiError(404, 'TARIF_INTROUVE', 'Tarif non configuré pour ce type de location');
+    return tarif.montant;
+  }
+
+  // Type inconnu : aucun tarif → montant null = CONFIGURATION_A_VALIDER.
+  return null;
 }
 
 async function resoudreClient(prisma, donnees) {
@@ -262,8 +272,8 @@ async function lister(req) {
         { depart: { contains: search, mode: 'insensitive' } },
       ];
     }
-    if (req.query.type) where.type = req.query.type;
-    if (req.query.statut) where.statut = req.query.statut;
+    if (actif(req.query.type)) where.type = req.query.type;
+    if (actif(req.query.statut)) where.statut = req.query.statut;
     if (req.query.dateDe || req.query.dateAu) {
       where.dateDebut = {};
       if (req.query.dateDe) where.dateDebut.gte = new Date(req.query.dateDe);

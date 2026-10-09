@@ -234,7 +234,7 @@ export default function Locations() {
             titre="Nouvelle demande de location"
             description={
               formulaire.type === 'BATIMENT' || formulaire.type === 'TERRAIN'
-                ? 'Aucun tarif validé pour ce type : le montant restera « à valider » (CONFIGURATION_A_VALIDER).'
+                ? 'Montant appliqué automatiquement : bâtiment 8 000 000 Ar ; terrain 5 000 000 Ar.'
                 : 'Le montant est calculé d’après le tarif FCE et les options choisies.'
             }
             messageErreur={erreurGlobale}

@@ -48,7 +48,7 @@ export default function PageTable({
 
   const paramsFiltres = {}
   for (const filtre of filtres) {
-    if (filtre.valeur && filtre.valeur !== 'toutes') {
+    if (filtre.valeur && filtre.valeur !== 'toutes' && filtre.valeur !== 'tous') {
       paramsFiltres[filtre.cle] = filtre.valeur
     }
   }

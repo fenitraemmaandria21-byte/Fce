@@ -108,7 +108,7 @@ export default function Bran() {
   return (
     <PageTable
       titre="BRAN"
-      description="Bordereau de renseignements automatiques numériques. Numérotation non validée par la FCE (REGLE_A_CONFIRMER)."
+      description="Bordereau de renseignements automatiques numériques. Numéro généré automatiquement (BRAN-<année>-<séquence>)."
       endpoint="/bran"
       libelleNombre="bordereau(x)"
       placeholderRecherche="Rechercher (n° BRAN, référence envoi)…"

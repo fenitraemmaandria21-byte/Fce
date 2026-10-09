@@ -158,7 +158,7 @@ export default function Billets() {
     <div className="space-y-4">
       <PageTable
         titre="Billetterie"
-        description="Vente de billets : la zone est déduite automatiquement de la destination. Enfant : demi-tarif non encore validé (signalé par l’API)."
+        description="Vente de billets : la zone est déduite automatiquement de la destination. Enfant : demi-tarif (6 250 Ar). Numéro généré automatiquement (FCE-<année>-<séquence>)."
         endpoint="/billets"
         libelleNombre="billet(s)"
         placeholderRecherche="Rechercher (n°, voyageur, pièce)…"
@@ -212,8 +212,8 @@ export default function Billets() {
                   </SelectContent>
                 </Select>
                 {formulaire.categorie === 'ENFANT' && (
-                  <p className="text-xs text-amber-600">
-                    Demi-tarif enfant non validé par la FCE — la vente sera refusée (CONFIGURATION_A_VALIDER).
+                  <p className="text-xs text-muted-foreground">
+                    Enfant : demi-tarif appliqué (6 250 Ar).
                   </p>
                 )}
               </div>

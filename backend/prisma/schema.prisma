@@ -154,7 +154,7 @@ model TarifBillet {
 
 // Tarifs location validés (Ar).
 // Draisine : par zone. Machine : par formule (cle).
-// Bâtiment / Terrain : aucun tarif → CONFIGURATION_A_VALIDER.
+// Bâtiment / Terrain : tarif unique (zoneId=null, cle=null).
 model TarifLocation {
   id     String        @id @default(cuid())
   type   TypeLocation

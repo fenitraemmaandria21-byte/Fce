@@ -1,6 +1,7 @@
 const { getPrisma } = require('../config/database');
 const { ApiError } = require('../utils/ApiError');
 const { dbCall } = require('../utils/db');
+const { actif } = require('../utils/filtres');
 const { parsePagination, paginated } = require('../utils/pagination');
 const { journaliser } = require('../utils/journal');
 
@@ -22,7 +23,7 @@ async function listerGares(req) {
     const prisma = getPrisma();
     const { skip, take, search, tri, ordre, page, limit } = parsePagination(req);
     const where = construireWhereRecherche(search, ['code', 'nom']);
-    if (req.query.zone) where.zone = { code: req.query.zone };
+    if (actif(req.query.zone)) where.zone = { code: req.query.zone };
 
     const triAutorises = ['code', 'nom', 'pk'];
     const champTri = triAutorises.includes(tri) ? tri : 'pk';
@@ -226,8 +227,8 @@ async function listerTarifsBillet(req) {
   return dbCall(async () => {
     const prisma = getPrisma();
     const where = {};
-    if (req.query.zone) where.zone = { code: req.query.zone };
-    if (req.query.classe) where.classe = req.query.classe;
+    if (actif(req.query.zone)) where.zone = { code: req.query.zone };
+    if (actif(req.query.classe)) where.classe = req.query.classe;
     const donnees = await prisma.tarifBillet.findMany({
       where,
       include: { zone: { select: { code: true } } },
@@ -241,7 +242,7 @@ async function listerTarifsLocation(req) {
   return dbCall(async () => {
     const prisma = getPrisma();
     const where = {};
-    if (req.query.type) where.type = req.query.type;
+    if (actif(req.query.type)) where.type = req.query.type;
     const donnees = await prisma.tarifLocation.findMany({
       where,
       include: { zone: { select: { code: true } } },

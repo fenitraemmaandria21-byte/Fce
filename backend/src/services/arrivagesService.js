@@ -1,6 +1,7 @@
 const { getPrisma } = require('../config/database');
 const { ApiError } = require('../utils/ApiError');
 const { dbCall } = require('../utils/db');
+const { actif } = require('../utils/filtres');
 const { parsePagination, paginated } = require('../utils/pagination');
 const { journaliser } = require('../utils/journal');
 
@@ -95,8 +96,8 @@ async function lister(req) {
         { observations: { contains: search, mode: 'insensitive' } },
       ];
     }
-    if (req.query.statut) where.statut = req.query.statut;
-    if (req.query.gare) where.gare = { code: { equals: String(req.query.gare).toUpperCase() } };
+    if (actif(req.query.statut)) where.statut = req.query.statut;
+    if (actif(req.query.gare)) where.gare = { code: { equals: String(req.query.gare).toUpperCase() } };
     if (req.query.dateDe || req.query.dateAu) {
       where.dateArrivage = {};
       if (req.query.dateDe) where.dateArrivage.gte = new Date(req.query.dateDe);

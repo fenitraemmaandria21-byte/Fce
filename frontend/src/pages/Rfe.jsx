@@ -67,7 +67,7 @@ export default function Rfe() {
   return (
     <PageTable
       titre="RFE"
-      description="Relevé de fin d’exploitation : facturation liée à une location validée. Numéros non validés par la FCE (REGLE_A_CONFIRMER)."
+      description="Relevé de fin d’exploitation : facturation liée à une location validée. Numéros générés automatiquement (RFE/FAC/REC-<année>-<séquence>)."
       endpoint="/rfe"
       libelleNombre="relevé(s)"
       placeholderRecherche="Rechercher (n° RFE, facture, reçu, client)…"

@@ -1,6 +1,7 @@
 const { getPrisma } = require('../config/database');
 const { ApiError } = require('../utils/ApiError');
 const { dbCall } = require('../utils/db');
+const { actif } = require('../utils/filtres');
 const { parsePagination, paginated } = require('../utils/pagination');
 const { journaliser } = require('../utils/journal');
 
@@ -85,6 +86,19 @@ async function verifierTrain(prisma, trainId, dateVoyage) {
   return train;
 }
 
+// Numérotation validée : FCE-<année>-<séquence annuelle à 6 chiffres>.
+async function prochainNumero(prisma, dateVoyage) {
+  const annee = new Date(dateVoyage).getUTCFullYear();
+  const prefixe = `FCE-${annee}-`;
+  const dernier = await prisma.billet.findFirst({
+    where: { numero: { startsWith: prefixe } },
+    orderBy: { numero: 'desc' },
+    select: { numero: true },
+  });
+  const suivant = dernier ? parseInt(dernier.numero.slice(prefixe.length), 10) + 1 : 1;
+  return `${prefixe}${String(suivant).padStart(6, '0')}`;
+}
+
 // POST /api/billets
 async function creer(donnees, appelant) {
   return dbCall(async () => {
@@ -99,7 +113,7 @@ async function creer(donnees, appelant) {
     // documentée (ne jamais inventer).
 
     const donneesCreation = {
-      numero: null, // REGLE_A_CONFIRMER — règle de numérotation non validée
+      numero: await prochainNumero(prisma, donnees.dateVoyage),
       voyageurNom: donnees.voyageurNom,
       voyageurIdentite: donnees.voyageurIdentite,
       typeIdentite: donnees.typeIdentite,
@@ -197,9 +211,9 @@ async function lister(req) {
         { voyageurIdentite: { contains: search, mode: 'insensitive' } },
       ];
     }
-    if (req.query.statut) where.statut = req.query.statut;
-    if (req.query.classe) where.classe = req.query.classe;
-    if (req.query.destination) {
+    if (actif(req.query.statut)) where.statut = req.query.statut;
+    if (actif(req.query.classe)) where.classe = req.query.classe;
+    if (actif(req.query.destination)) {
       where.destination = { code: { equals: String(req.query.destination).toUpperCase() } };
     }
     if (req.query.dateDe || req.query.dateAu) {
@@ -251,10 +265,16 @@ async function recuperer(id) {
 }
 
 // POST /api/billets/:id/annuler
-// La règle d'annulation n'est pas documentée → REGLE_A_CONFIRMER.
+// Règle validée : annulation libre jusqu'à la veille du voyage (J-1 inclus).
 async function annuler(id, appelant) {
   return dbCall(async () => {
     const prisma = getPrisma();
+
+    const billet = await prisma.billet.findUnique({ where: { id } });
+    if (!billet) throw new ApiError(404, 'BILLET_INTROUVE', 'Billet introuvable');
+    if (billet.statut === 'ANNULE') {
+      throw new ApiError(409, 'DEJA_ANNULE', 'Ce billet est déjà annulé');
+    }
 
     const param = await prisma.parametreSysteme.findUnique({
       where: { cle: 'REGLE_ANNULATION_BILLET' },
@@ -268,10 +288,16 @@ async function annuler(id, appelant) {
       );
     }
 
-    const billet = await prisma.billet.findUnique({ where: { id } });
-    if (!billet) throw new ApiError(404, 'BILLET_INTROUVE', 'Billet introuvable');
-    if (billet.statut === 'ANNULE') {
-      throw new ApiError(409, 'DEJA_ANNULE', 'Ce billet est déjà annulé');
+    const aujourdhui = new Date();
+    aujourdhui.setUTCHours(0, 0, 0, 0);
+    const debutVoyage = new Date(billet.dateVoyage);
+    debutVoyage.setUTCHours(0, 0, 0, 0);
+    if (debutVoyage <= aujourdhui) {
+      throw new ApiError(
+        409,
+        'ANNULATION_TARDIVE',
+        "Annulation impossible : le voyage est aujourd'hui ou déjà passé (règle J-1)."
+      );
     }
 
     const maj = await prisma.billet.update({
