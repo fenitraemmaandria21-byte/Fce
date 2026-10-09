@@ -2,7 +2,7 @@ import { Fragment } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 
 import AppSidebar from '@/components/layout/AppSidebar'
-import { Badge } from '@/components/ui/badge'
+import { BadgeRole } from '@/lib/affichage'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -19,7 +19,6 @@ import { useAuth } from '@/context/AuthContext'
 const LIBELLES_PAGES = {
   '/': 'Tableau de bord',
   '/statistiques': 'Statistiques',
-  '/journal': 'Journal d’activité',
   '/gares': 'Gares',
   '/arrets': 'Arrêts',
   '/tarifs': 'Tarifs',
@@ -80,7 +79,7 @@ export default function AppLayout() {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <FilAriane />
             <div className="ml-auto flex items-center gap-2">
-              <Badge variant="outline">{utilisateur?.role}</Badge>
+              <BadgeRole role={utilisateur?.role} />
             </div>
           </header>
           <main className="flex flex-1 flex-col gap-6 p-6">

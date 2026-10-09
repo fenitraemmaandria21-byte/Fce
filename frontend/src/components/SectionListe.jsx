@@ -16,20 +16,37 @@ function ValeurDefaut(valeur) {
 }
 
 // Tableau de données standard (chargement / vide / lignes).
+// Les colonnes numériques/montants doivent passer `align: 'right'`
+// pour une lecture agréable (en-tête et cellules alignés à droite).
 export default function SectionListe({
   colonnes,
   chargement,
   lignes = [],
   messageVide = 'Aucune donnée.',
   nbLignesChargement = 4,
+  rendreActions = null,
 }) {
+  const colonnesAffichees = rendreActions
+    ? [...colonnes, { titre: 'Actions', align: 'right' }]
+    : colonnes
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            {colonnes.map((colonne) => (
-              <TableHead key={colonne.titre}>{colonne.titre}</TableHead>
+            {colonnesAffichees.map((colonne) => (
+              <TableHead
+                key={colonne.titre}
+                className={
+                  colonne.align === 'right'
+                    ? 'text-right'
+                    : colonne.align === 'center'
+                      ? 'text-center'
+                      : undefined
+                }
+              >
+                {colonne.titre}
+              </TableHead>
             ))}
           </TableRow>
         </TableHeader>
@@ -37,8 +54,17 @@ export default function SectionListe({
           <TableBody>
             {Array.from({ length: nbLignesChargement }).map((_, i) => (
               <TableRow key={i}>
-                {colonnes.map((colonne) => (
-                  <TableCell key={colonne.titre}>
+                {colonnesAffichees.map((colonne) => (
+                  <TableCell
+                    key={colonne.titre}
+                    className={
+                      colonne.align === 'right'
+                        ? 'text-right'
+                        : colonne.align === 'center'
+                          ? 'text-center'
+                          : undefined
+                    }
+                  >
                     <Skeleton className="h-4 w-24" />
                   </TableCell>
                 ))}
@@ -50,7 +76,7 @@ export default function SectionListe({
             {lignes.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={colonnes.length}
+                  colSpan={colonnesAffichees.length}
                   className="h-24 text-center text-muted-foreground"
                 >
                   {messageVide}
@@ -58,12 +84,25 @@ export default function SectionListe({
               </TableRow>
             ) : (
               lignes.map((ligne, index) => (
-                <TableRow key={ligne.id ?? index}>
-                  {colonnes.map((colonne) => (
-                    <TableCell key={colonne.titre}>
-                      {colonne.rendre
-                        ? colonne.rendre(ligne)
-                        : ValeurDefaut(ligne[colonne.cle])}
+                <TableRow key={ligne.id ?? ligne.cle ?? index}>
+                  {colonnesAffichees.map((colonne, indiceColonne) => (
+                    <TableCell
+                      key={colonne.titre}
+                      className={
+                        colonne.align === 'right'
+                          ? 'text-right'
+                          : colonne.align === 'center'
+                            ? 'text-center'
+                            : undefined
+                      }
+                    >
+                      {indiceColonne === colonnes.length ? (
+                        <div className="flex justify-end">{rendreActions?.(ligne)}</div>
+                      ) : colonne.rendre ? (
+                        colonne.rendre(ligne)
+                      ) : (
+                        ValeurDefaut(ligne[colonne.cle])
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>

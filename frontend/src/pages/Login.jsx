@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { Loader2, TrainFront } from 'lucide-react'
+import { Loader2, TrainFront, ShieldCheck, BarChart3, FileText } from 'lucide-react'
 import { z } from 'zod'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -20,6 +20,8 @@ const connexionSchema = z.object({
   email: z.email('Adresse e-mail invalide'),
   motDePasse: z.string().min(1, 'Mot de passe requis'),
 })
+
+const ANNEE_COURANTE = new Date().getFullYear()
 
 export default function Login() {
   const { utilisateur, connexion } = useAuth()
@@ -59,25 +61,68 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-3">
-          <span className="grid size-12 place-items-center rounded-lg bg-fce-600 text-lg font-bold text-white">
+    <div className="flex min-h-screen">
+      <aside className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-slate-900 p-10 text-slate-100 lg:flex">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,197,94,0.25),transparent_60%)]" />
+        <div className="relative flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-xl bg-fce-600 text-white shadow-lg shadow-fce-600/30">
             <TrainFront className="size-6" />
           </span>
-          <CardTitle className="text-2xl">FCE-SI</CardTitle>
-          <CardDescription>
-            Plateforme de gestion des opérations de transport ferroviaire — Connexion
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={soumettre} className="space-y-4" noValidate>
-            {erreurServeur && (
-              <Alert variant="destructive">
-                <AlertTitle>Connexion refusée</AlertTitle>
-                <AlertDescription>{erreurServeur}</AlertDescription>
-              </Alert>
-            )}
+          <span className="text-xl font-bold tracking-tight">
+            FCE-SI
+          </span>
+        </div>
+
+        <div className="relative space-y-6">
+          <h1 className="text-3xl font-bold leading-tight">
+            Pilotage des opérations ferroviaires
+          </h1>
+          <p className="max-w-md text-sm leading-relaxed text-slate-400">
+            Billetterie, marchandises, locations, rapports BRAN/RFE, statistiques et
+            journal d'activité — un seul outil pour toute la flotte de la FCE.
+          </p>
+          <ul className="space-y-3 text-sm">
+            <li className="flex items-center gap-3">
+              <ShieldCheck className="size-4 shrink-0 text-fce-500" />
+              Accès sécurisé par rôle (agent, administrateur, superadministrateur)
+            </li>
+            <li className="flex items-center gap-3">
+              <BarChart3 className="size-4 shrink-0 text-fce-500" />
+              Tableaux de bord et statistiques en temps réel
+            </li>
+            <li className="flex items-center gap-3">
+              <FileText className="size-4 shrink-0 text-fce-500" />
+              Journalisation complète des opérations
+            </li>
+          </ul>
+        </div>
+
+        <p className="relative text-xs text-slate-500">
+          © {ANNEE_COURANTE} Fitadia – Compagnie Ferroviaire Express (FCE)
+        </p>
+      </aside>
+
+      <main className="flex flex-1 items-center justify-center bg-slate-50 p-4">
+        <Card className="w-full max-w-md border-slate-200 shadow-sm">
+          <CardHeader className="space-y-3">
+            <span className="grid size-12 place-items-center rounded-xl bg-fce-600 text-lg font-bold text-white lg:hidden">
+              <TrainFront className="size-6" />
+            </span>
+            <div>
+              <CardTitle className="text-2xl">Connexion</CardTitle>
+              <CardDescription>
+                Accédez à la plateforme FCE-SI avec votre compte.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={soumettre} className="space-y-4" noValidate>
+              {erreurServeur && (
+                <Alert variant="destructive">
+                  <AlertTitle>Connexion refusée</AlertTitle>
+                  <AlertDescription>{erreurServeur}</AlertDescription>
+                </Alert>
+              )}
 
             <div className="space-y-2">
               <Label htmlFor="email">Adresse e-mail</Label>
@@ -121,6 +166,7 @@ export default function Login() {
           </form>
         </CardContent>
       </Card>
+      </main>
     </div>
   )
 }

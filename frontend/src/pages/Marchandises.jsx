@@ -26,7 +26,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useApi } from '@/hooks/useApi'
 import api, { messageApi } from '@/services/api'
-import { BadgeStatut, formatArgent, formatDate, formatNombre } from '@/lib/affichage'
+import { BadgeStatut, LIBELLES_STATUT, formatArgent, formatDate, formatNombre } from '@/lib/affichage'
 
 const LIGNE_VIDE = {
   categorie: '',
@@ -402,7 +402,7 @@ export default function Marchandises() {
             largeur: 'w-40',
             options: [
               { valeur: 'tous', libelle: 'Tous les statuts' },
-              ...STATUTS.map((s) => ({ valeur: s, libelle: s })),
+              ...STATUTS.map((s) => ({ valeur: s, libelle: LIBELLES_STATUT[s] || s })),
             ],
           },
           {
@@ -421,12 +421,13 @@ export default function Marchandises() {
           { titre: 'Date', rendre: (l) => formatDate(l.dateEnvoi) },
           { titre: 'Expéditeur', cle: 'expediteurNom' },
           { titre: 'Destinataire', cle: 'destinataireNom' },
-          { titre: 'Colis', rendre: (l) => formatNombre(l.nombreColis) },
+          { titre: 'Colis', align: 'right', rendre: (l) => formatNombre(l.nombreColis) },
           {
             titre: 'Poids (kg)',
+            align: 'right',
             rendre: (l) => (l.poidsTotal != null ? formatNombre(Number(l.poidsTotal)) : '—'),
           },
-          { titre: 'Lignes', rendre: (l) => formatNombre(l.nombreLignes) },
+          { titre: 'Lignes', align: 'right', rendre: (l) => formatNombre(l.nombreLignes) },
           { titre: 'Dest.', rendre: (l) => (l.gareDestination?.code ? <Badge variant="outline">{l.gareDestination.code}</Badge> : '—') },
           { titre: 'Statut', rendre: (l) => <BadgeStatut statut={l.statut} /> },
         ]}

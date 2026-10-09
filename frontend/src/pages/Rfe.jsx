@@ -123,13 +123,13 @@ export default function Rfe() {
         ) : null
       }
       colonnes={[
-        { titre: 'N°', rendre: (l) => <span className="font-medium tabular-nums">{l.numero || '—'}</span> },
+        { titre: 'N°', align: 'right', rendre: (l) => <span className="font-medium tabular-nums">{l.numero || '—'}</span> },
         { titre: 'Date', rendre: (l) => formatDate(l.dateRfe) },
         { titre: 'Client', rendre: (l) => l.location?.client?.nom || '—' },
         { titre: 'Zone', rendre: (l) => (l.location?.zone?.code ? <Badge variant="outline">{l.location.zone.code}</Badge> : '—') },
-        { titre: 'Montant', rendre: (l) => <span className="font-medium tabular-nums">{formatArgent(l.montant)}</span> },
-        { titre: 'N° facture', rendre: (l) => <span className="tabular-nums">{l.factureNumero || '—'}</span> },
-        { titre: 'N° reçu', rendre: (l) => <span className="tabular-nums">{l.recuNumero || '—'}</span> },
+        { titre: 'Montant', align: 'right', rendre: (l) => <span className="font-medium tabular-nums">{formatArgent(l.montant)}</span> },
+        { titre: 'N° facture', align: 'right', rendre: (l) => <span className="tabular-nums">{l.factureNumero || '—'}</span> },
+        { titre: 'N° reçu', align: 'right', rendre: (l) => <span className="tabular-nums">{l.recuNumero || '—'}</span> },
       ]}
     />
   )

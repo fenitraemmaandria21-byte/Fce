@@ -227,7 +227,7 @@ export default function Arrivages() {
       colonnes={[
         { titre: 'Date', rendre: (l) => formatDate(l.dateArrivage) },
         { titre: 'Envoi', rendre: (l) => <span className="font-medium">{l.envoi?.reference || '—'}</span> },
-        { titre: 'Destinataire', cle: 'destinataire', rendre: (l) => l.envoi?.destinataireNom || '—' },
+        { titre: 'Destinataire', rendre: (l) => l.envoi?.destinataireNom || '—' },
         { titre: 'Train', rendre: (l) => (l.train?.numero ? <Badge variant="outline">{l.train.numero}</Badge> : '—') },
         { titre: 'Gare', rendre: (l) => (l.gare?.code ? <Badge variant="outline">{l.gare.code}</Badge> : '—') },
         { titre: 'Statut', rendre: (l) => <BadgeStatut statut={l.statut} /> },

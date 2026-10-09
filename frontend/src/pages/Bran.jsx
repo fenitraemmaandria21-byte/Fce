@@ -205,7 +205,7 @@ export default function Bran() {
         ) : null
       }
       colonnes={[
-        { titre: 'N°', rendre: (l) => <span className="font-medium tabular-nums">{l.numero || '—'}</span> },
+        { titre: 'N°', align: 'right', rendre: (l) => <span className="font-medium tabular-nums">{l.numero || '—'}</span> },
         { titre: 'Date', rendre: (l) => formatDate(l.dateBran) },
         {
           titre: 'Envoi',
@@ -221,9 +221,10 @@ export default function Bran() {
         },
         {
           titre: 'Montant total',
+          align: 'right',
           rendre: (l) => <span className="font-medium tabular-nums">{formatArgent(l.montantTotal)}</span>,
         },
-        { titre: 'Lignes', rendre: (l) => <Badge variant="outline">{formatNombre(l.lignes?.length || 0)}</Badge> },
+        { titre: 'Lignes', align: 'right', rendre: (l) => <Badge variant="outline">{formatNombre(l.lignes?.length || 0)}</Badge> },
       ]}
     />
   )

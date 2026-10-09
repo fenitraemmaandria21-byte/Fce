@@ -53,8 +53,8 @@ export const LIBELLES_CATEGORIE = {
 }
 
 export const LIBELLES_ROLE = {
-  SUPERADMIN: 'Superadmin',
-  ADMIN: 'Admin',
+  SUPERADMIN: 'Super administrateur',
+  ADMIN: 'Administrateur',
   AGENT: 'Agent',
 }
 
@@ -75,6 +75,20 @@ export const LIBELLES_STATUT = {
 export const LIBELLES_TYPE_IDENTITE = {
   CIN: 'CIN',
   PASSEPORT: 'Passeport',
+}
+
+// Libellés métier des paramètres système — masquent la clé technique.
+export const LIBELLES_PARAMETRE = {
+  CAPACITE_DRAISINE: 'Capacité draisine',
+  CAPACITE_MACHINE: 'Capacité machine',
+  DEMI_TARIF_BILLET: 'Demi-tarif billet',
+  REGLE_ANNULATION_BILLET: 'Règle annulation billet',
+  NUMEROTATION_BILLET: 'Numérotation des billets',
+  CAPACITE_MAX_TRAIN_MARCHANDISES: 'Capacité train marchandises',
+  TARIF_BATIMENT_TERRAIN: 'Tarifs patrimoine (bâtiments/terrains)',
+  TARIF_ARRET_PK102: 'Tarif arrêt PK102',
+  TARIF_ARRET_PK115: 'Tarif arrêt PK115',
+  TARIF_ARRET_PK123: 'Tarif arrêt PK123',
 }
 
 // Variante shadcn d'un badge de statut (bonne lisibilité sans couleur "destructive").

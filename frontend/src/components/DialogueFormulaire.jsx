@@ -1,3 +1,5 @@
+import { Loader2 } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -58,7 +60,14 @@ export default function DialogueFormulaire({
               Annuler
             </Button>
             <Button type="submit" disabled={!valide || enCours}>
-              {enCours ? 'Envoi…' : libelleValider}
+              {enCours ? (
+                <>
+                  <Loader2 className="mr-1 animate-spin" />
+                  Envoi…
+                </>
+              ) : (
+                libelleValider
+              )}
             </Button>
           </DialogFooter>
         </form>

@@ -15,6 +15,7 @@ export default function PageListe({
   messageVide = 'Aucune donnée.',
   aideErreur,
   actions,
+  rendreActions,
 }) {
   const { chargement, donnees, erreur, message, recharger } = useApi(endpoint, params)
   const lignes = donnees?.donnees || []
@@ -46,6 +47,7 @@ export default function PageListe({
         chargement={chargement}
         lignes={lignes}
         messageVide={erreur ? 'Données indisponibles.' : messageVide}
+        rendreActions={rendreActions}
       />
     </div>
   )

@@ -280,7 +280,7 @@ async function lister(req) {
         take,
         orderBy: { [champTri]: ordre },
         include: {
-          client: { select: { nom: true, contact: true } },
+          client: { select: { nom: true, contact: true, adresse: true } },
           zone: { select: { code: true } },
         },
       }),

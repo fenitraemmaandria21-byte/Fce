@@ -448,6 +448,9 @@ export default function Locations() {
                 {l.client?.contact && (
                   <span className="text-muted-foreground">({l.client.contact})</span>
                 )}
+                {l.client?.adresse && (
+                  <span className="block text-xs text-muted-foreground">{l.client.adresse}</span>
+                )}
               </span>
             ),
           },
@@ -465,10 +468,11 @@ export default function Locations() {
                 afficherFormule(l)
               ),
           },
-          { titre: 'Personnes', rendre: (l) => `${l.personnes}` },
+          { titre: 'Personnes', align: 'right', rendre: (l) => `${l.personnes}` },
           { titre: 'Début', rendre: (l) => formatDate(l.dateDebut, true) },
           {
             titre: 'Montant',
+            align: 'right',
             rendre: (l) =>
               l.montant != null ? (
                 <span className="tabular-nums">{formatArgent(l.montant)}</span>
@@ -488,7 +492,7 @@ export default function Locations() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-emerald-700"
+                      className="text-fce-700"
                       title="Valider"
                       onClick={() => ouvrirDecision(l, 'VALIDEE')}
                     >

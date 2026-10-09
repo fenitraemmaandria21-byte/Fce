@@ -366,6 +366,7 @@ export default function Billets() {
         colonnes={[
           {
             titre: 'N°',
+            align: 'right',
             rendre: (l) => <span className="font-medium tabular-nums">{l.numero || '—'}</span>,
           },
           {
@@ -382,12 +383,16 @@ export default function Billets() {
             rendre: (l) => (
               <span>
                 {l.destination?.code}{' '}
-                <span className="text-muted-foreground">Z{l.zone?.code}</span>
+                <span className="text-muted-foreground">{l.zone?.code}</span>
               </span>
             ),
           },
           { titre: 'Classe', rendre: (l) => LIBELLES_CLASSE[l.classe] || l.classe },
-          { titre: 'Tarif', rendre: (l) => <span className="tabular-nums">{facturetarif(l)}</span> },
+          {
+            titre: 'Tarif',
+            align: 'right',
+            rendre: (l) => <span className="tabular-nums">{facturetarif(l)}</span>,
+          },
           { titre: 'Date voyage', rendre: (l) => formatDate(l.dateVoyage) },
           { titre: 'Statut', rendre: (l) => <BadgeStatut statut={l.statut} /> },
         ]}

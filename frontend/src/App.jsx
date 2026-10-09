@@ -13,7 +13,7 @@ import Arrets from '@/pages/Arrets'
 import Arrivages from '@/pages/Arrivages'
 import Bran from '@/pages/Bran'
 import Billets from '@/pages/Billets'
-import Journal from '@/pages/Journal'
+import Clients from '@/pages/Clients'
 import Locations from '@/pages/Locations'
 import Marchandises from '@/pages/Marchandises'
 import Rfe from '@/pages/Rfe'
@@ -24,7 +24,6 @@ import Trains from '@/pages/Trains'
 import Utilisateurs from '@/pages/Utilisateurs'
 import Voitures from '@/pages/Voitures'
 import Wagons from '@/pages/Wagons'
-import { ClientsPage } from '@/pages/modules'
 
 export default function App() {
   return (
@@ -75,7 +74,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="clients" element={<ClientsPage />} />
+            <Route path="clients" element={<Clients />} />
             <Route
               path="parametres"
               element={
@@ -85,14 +84,6 @@ export default function App() {
               }
             />
             <Route path="statistiques" element={<Statistiques />} />
-            <Route
-              path="journal"
-              element={
-                <ProtectedRoute roles={['SUPERADMIN', 'ADMIN']}>
-                  <Journal />
-                </ProtectedRoute>
-              }
-            />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

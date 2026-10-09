@@ -1,20 +1,12 @@
 import {
-  BarChart3,
-  Car,
-  Coins,
-  Container,
   FileCheck2,
   FileText,
   LayoutDashboard,
   LogOut,
-  MapPin,
   Package,
   PackageCheck,
-  ScrollText,
   Settings,
-  Signpost,
   Ticket,
-  TrainFront,
   Truck,
   User,
   Users,
@@ -48,27 +40,7 @@ import { useAuth } from '@/context/AuthContext'
 const MENU = [
   {
     label: 'Pilotage',
-    items: [
-      { titre: 'Tableau de bord', url: '/', icon: LayoutDashboard },
-      { titre: 'Statistiques', url: '/statistiques', icon: BarChart3 },
-      {
-        titre: 'Journal d’activité',
-        url: '/journal',
-        icon: ScrollText,
-        roles: ['SUPERADMIN', 'ADMIN'],
-      },
-    ],
-  },
-  {
-    label: 'Référentiels',
-    items: [
-      { titre: 'Gares', url: '/gares', icon: MapPin },
-      { titre: 'Arrêts', url: '/arrets', icon: Signpost },
-      { titre: 'Tarifs', url: '/tarifs', icon: Coins },
-      { titre: 'Trains', url: '/trains', icon: TrainFront },
-      { titre: 'Voitures', url: '/voitures', icon: Car },
-      { titre: 'Wagons', url: '/wagons', icon: Container },
-    ],
+    items: [{ titre: 'Tableau de bord', url: '/', icon: LayoutDashboard }],
   },
   {
     label: 'Exploitation',

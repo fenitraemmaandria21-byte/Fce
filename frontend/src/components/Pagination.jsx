@@ -8,7 +8,7 @@ export default function Pagination({ pagination, chargement, page, setPage, libe
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm tabular-nums text-muted-foreground">
         {pagination.total} {libelle} — page {pagination.page} / {pagination.pages}
       </p>
       <div className="flex gap-2">

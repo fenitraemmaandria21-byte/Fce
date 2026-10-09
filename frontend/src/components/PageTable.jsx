@@ -70,7 +70,14 @@ export default function PageTable({
   }, [recharger, apiRef])
 
   const colonnesAffichees = rendreActions
-    ? [...colonnes, { titre: 'Actions', rendre: rendreActions }]
+    ? [
+        ...colonnes,
+        {
+          titre: 'Actions',
+          align: 'right',
+          rendre: (ligne) => <div className="flex justify-end">{rendreActions(ligne)}</div>,
+        },
+      ]
     : colonnes
 
   return (
