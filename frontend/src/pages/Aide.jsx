@@ -105,7 +105,7 @@ const SECTIONS = [
     titre: 'Utilisateurs et clients',
     points: [
       'Administration → Utilisateurs : créer un compte, définir le rôle, activer/désactiver.',
-      'Administration → Clients : fiche client (nom, contact, adresse).',
+      'Administration → Clients : créer, consulter, modifier ou supprimer une fiche client.',
       'Administration → Paramètres : réservé au SUPERADMIN.',
     ],
   },
