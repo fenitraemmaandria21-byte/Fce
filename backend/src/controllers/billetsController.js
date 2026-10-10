@@ -22,4 +22,8 @@ const annuler = asyncHandler(async (req, res) => {
   res.json(await billetsService.annuler(req.params.id, req.utilisateur));
 });
 
-module.exports = { lister, recuperer, creer, modifier, annuler };
+const supprimer = asyncHandler(async (req, res) => {
+  res.json(await billetsService.supprimer(req.params.id, req.utilisateur));
+});
+
+module.exports = { lister, recuperer, creer, modifier, annuler, supprimer };

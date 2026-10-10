@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import AlerteErreur from '@/components/AlerteErreur'
@@ -11,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useApi } from '@/hooks/useApi'
 import { Marqueur } from '@/lib/affichage'
+import { confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 
 const modificationSchema = z.object({
@@ -30,7 +32,6 @@ export default function Arrets() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
-  const [erreurPage, setErreurPage] = useState(null)
 
   const ouvrirEdition = (arret) => {
     setEnEdition(arret)
@@ -65,6 +66,7 @@ export default function Arrets() {
     setErreurGlobale(null)
     try {
       await api.put(`/arrets/${enEdition.id}`, resultat.data)
+      toast.success('Arrêt modifié.')
       setDialogueOuvert(false)
       recharger()
     } catch (e) {
@@ -75,12 +77,13 @@ export default function Arrets() {
   }
 
   const supprimer = async (arret) => {
-    if (!window.confirm(`Supprimer l’arrêt « ${arret.libelle} » ?`)) return
+    if (!(await confirmerSuppression(`Supprimer l’arrêt « ${arret.libelle} » ?`))) return
     try {
       await api.delete(`/arrets/${arret.id}`)
+      toast.success('Arrêt supprimé.')
       recharger()
     } catch (e) {
-      setErreurPage(messageApi(e, 'Suppression impossible'))
+      toast.error(messageApi(e, 'Suppression impossible'))
     }
   }
 
@@ -107,9 +110,6 @@ export default function Arrets() {
         </p>
       </div>
 
-      {erreurPage && (
-        <AlerteErreur message={erreurPage} onReessayer={() => setErreurPage(null)} />
-      )}
       {erreur && (
         <AlerteErreur message={message} onReessayer={recharger} />
       )}

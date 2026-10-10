@@ -320,4 +320,32 @@ async function recuperer(id) {
   });
 }
 
-module.exports = { creer, modifier, changerStatut, lister, recuperer };
+// DELETE /api/locations/:id — suppression (bloquée si un RFE est émis).
+async function supprimer(id, appelant) {
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const existant = await prisma.location.findUnique({ where: { id }, include: { rfe: true } });
+    if (!existant) throw new ApiError(404, 'LOCATION_INTROUVE', 'Location introuvable');
+    if (existant.rfe) {
+      throw new ApiError(
+        409,
+        'LOCATION_FACTUREE',
+        'Suppression impossible : un RFE est déjà émis pour cette location.'
+      );
+    }
+
+    await prisma.location.delete({ where: { id } });
+
+    await journaliser({
+      utilisateurId: appelant.id,
+      action: 'SUPPRESSION_LOCATION',
+      entite: 'Location',
+      entiteId: id,
+      details: { type: existant.type, montant: existant.montant },
+    });
+
+    return { supprime: true };
+  });
+}
+
+module.exports = { creer, modifier, changerStatut, lister, recuperer, supprimer };

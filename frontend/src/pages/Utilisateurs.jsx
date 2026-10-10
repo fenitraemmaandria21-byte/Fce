@@ -1,8 +1,8 @@
 import { Eye, EyeOff, Pencil, Plus, UserRound } from 'lucide-react'
 import { useState, useRef } from 'react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
-import AlerteErreur from '@/components/AlerteErreur'
 import DialogueFormulaire from '@/components/DialogueFormulaire'
 import PageTable from '@/components/PageTable'
 import { Badge } from '@/components/ui/badge'
@@ -51,7 +51,6 @@ export default function Utilisateurs() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
-  const [erreurPage, setErreurPage] = useState(null)
   const rechargerRef = useRef(null)
 
   const ouvrirCreation = () => {
@@ -102,6 +101,7 @@ export default function Utilisateurs() {
       } else {
         await api.post('/users', charge)
       }
+      toast.success(enEdition ? 'Utilisateur modifié.' : 'Utilisateur créé.')
       setDialogueOuvert(false)
       rechargerRef.current?.()
     } catch (erreur) {
@@ -114,9 +114,10 @@ export default function Utilisateurs() {
   const basculerStatut = async (utilisateur) => {
     try {
       await api.patch(`/users/${utilisateur.id}/status`, { actif: !utilisateur.actif })
+      toast.success(utilisateur.actif ? 'Utilisateur désactivé.' : 'Utilisateur réactivé.')
       rechargerRef.current?.()
     } catch (erreur) {
-      setErreurPage(messageApi(erreur, 'Changement de statut impossible'))
+      toast.error(messageApi(erreur, 'Changement de statut impossible'))
     }
   }
 
@@ -137,9 +138,6 @@ export default function Utilisateurs() {
 
   return (
     <div className="space-y-4">
-      {erreurPage && (
-        <AlerteErreur message={erreurPage} onReessayer={() => setErreurPage(null)} />
-      )}
       <PageTable
         titre="Utilisateurs"
         description="Comptes de la plateforme et leurs rôles. Lecture : SUPERADMIN et ADMIN. Création, modification et activation : SUPERADMIN uniquement."

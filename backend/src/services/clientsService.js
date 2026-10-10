@@ -1,5 +1,7 @@
 const { getPrisma } = require('../config/database');
+const { ApiError } = require('../utils/ApiError');
 const { dbCall } = require('../utils/db');
+const { journaliser } = require('../utils/journal');
 const { parsePagination, paginated } = require('../utils/pagination');
 
 const TRI_WHITELIST = new Set(['nom', 'contact', 'adresse', 'createdAt']);
@@ -45,4 +47,35 @@ async function lister(req) {
   });
 }
 
-module.exports = { lister };
+// DELETE /api/clients/:id — suppression d'un client sans location.
+async function supprimer(id, appelant) {
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const existant = await prisma.client.findUnique({
+      where: { id },
+      select: { id: true, nom: true, _count: { select: { locations: true } } },
+    });
+    if (!existant) throw new ApiError(404, 'CLIENT_INTROUVE', 'Client introuvable');
+    if (existant._count.locations > 0) {
+      throw new ApiError(
+        409,
+        'CLIENT_A_ACTIVITES',
+        'Suppression impossible : ce client a des locations.'
+      );
+    }
+
+    await prisma.client.delete({ where: { id } });
+
+    await journaliser({
+      utilisateurId: appelant.id,
+      action: 'SUPPRESSION_CLIENT',
+      entite: 'Client',
+      entiteId: id,
+      details: { nom: existant.nom },
+    });
+
+    return { supprime: true };
+  });
+}
+
+module.exports = { lister, supprimer };

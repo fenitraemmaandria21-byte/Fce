@@ -26,4 +26,7 @@ router.post(
   billetsController.annuler
 );
 
+// Suppression : SUPERADMIN, ADMIN
+router.delete('/:id', requireRole('SUPERADMIN', 'ADMIN'), billetsController.supprimer);
+
 module.exports = router;

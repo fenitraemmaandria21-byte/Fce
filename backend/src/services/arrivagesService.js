@@ -136,4 +136,75 @@ async function recuperer(id) {
   });
 }
 
-module.exports = { creer, lister, recuperer };
+// PUT /api/arrivages/:id
+async function modifier(id, donnees, appelant) {
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const existant = await prisma.arrivage.findUnique({ where: { id } });
+    if (!existant) throw new ApiError(404, 'ARRIVAGE_INTROUVE', 'Arrivage introuvable');
+
+    if (donnees.trainId) {
+      const train = await prisma.train.findUnique({ where: { id: donnees.trainId } });
+      if (!train) throw new ApiError(404, 'TRAIN_INTROUVE', 'Train introuvable');
+    }
+    if (donnees.gareId) {
+      const gare = await prisma.gare.findUnique({ where: { id: donnees.gareId } });
+      if (!gare) throw new ApiError(404, 'GARE_INTROUVE', 'Gare introuvable');
+    }
+
+    const statut = donnees.statut || existant.statut;
+    const maj = await prisma.$transaction(async (tx) => {
+      const updated = await tx.arrivage.update({
+        where: { id },
+        data: {
+          trainId: donnees.trainId || null,
+          gareId: donnees.gareId || null,
+          dateArrivage: donnees.dateArrivage ? new Date(donnees.dateArrivage) : existant.dateArrivage,
+          statut,
+          observations: donnees.observations ?? null,
+        },
+      });
+
+      if (statut === 'RECUE') {
+        const envoi = await tx.envoi.findUnique({ where: { id: updated.envoiId } });
+        if (envoi && ['ENREGISTRE', 'FACTURE'].includes(envoi.statut)) {
+          await tx.envoi.update({ where: { id: envoi.id }, data: { statut: 'ARRIVE' } });
+        }
+      }
+      return updated;
+    });
+
+    await journaliser({
+      utilisateurId: appelant.id,
+      action: 'MODIFICATION_ARRIVAGE',
+      entite: 'Arrivage',
+      entiteId: id,
+      details: { avant: existant.statut, apres: maj.statut },
+    });
+
+    return recupererInterne(id);
+  });
+}
+
+// DELETE /api/arrivages/:id
+async function supprimer(id, appelant) {
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const existant = await prisma.arrivage.findUnique({ where: { id } });
+    if (!existant) throw new ApiError(404, 'ARRIVAGE_INTROUVE', 'Arrivage introuvable');
+
+    await prisma.arrivage.delete({ where: { id } });
+
+    await journaliser({
+      utilisateurId: appelant.id,
+      action: 'SUPPRESSION_ARRIVAGE',
+      entite: 'Arrivage',
+      entiteId: id,
+      details: { envoiId: existant.envoiId, statut: existant.statut },
+    });
+
+    return { supprime: true };
+  });
+}
+
+module.exports = { creer, modifier, lister, recuperer, supprimer };

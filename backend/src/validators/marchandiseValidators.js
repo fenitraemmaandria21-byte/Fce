@@ -44,4 +44,11 @@ const creerArrivageSchema = z.object({
   observations: z.string().trim().max(1000).optional().nullable(),
 });
 
-module.exports = { creerEnvoiSchema, modifierEnvoiSchema, creerArrivageSchema };
+const modifierArrivageSchema = creerArrivageSchema.omit({ envoiId: true }).partial();
+
+module.exports = {
+  creerEnvoiSchema,
+  modifierEnvoiSchema,
+  creerArrivageSchema,
+  modifierArrivageSchema,
+};

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import AlerteErreur from '@/components/AlerteErreur'
@@ -17,6 +18,7 @@ import {
   LIBELLES_TYPE_LOCATION,
   formatArgent,
 } from '@/lib/affichage'
+import { confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 
 const modificationSchema = z.object({
@@ -100,6 +102,7 @@ export default function Tarifs() {
           ? `/tarifs/billets/${dialogue.ligne.id}`
           : `/tarifs/locations/${dialogue.ligne.id}`
       await api.put(endpoint, resultat.data)
+      toast.success('Tarif modifié.')
       setDialogue({ ouvert: false, type: null, ligne: null })
       tarifsBillets.recharger()
       tarifsLocations.recharger()
@@ -115,17 +118,18 @@ export default function Tarifs() {
       type === 'billet'
         ? `${ligne.zone?.code || '—'} / ${LIBELLES_CLASSE[ligne.classe] || ligne.classe}`
         : `${LIBELLES_TYPE_LOCATION[ligne.type] || ligne.type}${ligne.cle ? ` / ${LIBELLES_FORMULE[ligne.cle] || ligne.cle}` : ''}`
-    if (!window.confirm(`Supprimer le tarif « ${descriptif} » (${formatArgent(ligne.montant)}) ?`)) return
+    if (!(await confirmerSuppression(`Supprimer le tarif « ${descriptif} » (${formatArgent(ligne.montant)}) ?`))) return
     const endpoint =
       type === 'billet'
         ? `/tarifs/billets/${ligne.id}`
         : `/tarifs/locations/${ligne.id}`
     try {
       await api.delete(endpoint)
+      toast.success('Tarif supprimé.')
       tarifsBillets.recharger()
       tarifsLocations.recharger()
     } catch (e) {
-      setErreur(messageApi(e, 'Suppression impossible'))
+      toast.error(messageApi(e, 'Suppression impossible'))
     }
   }
 

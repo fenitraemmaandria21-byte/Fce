@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import AlerteErreur from '@/components/AlerteErreur'
@@ -18,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { useApi } from '@/hooks/useApi'
 import { LIBELLES_CLASSE, formatNombre } from '@/lib/affichage'
+import { confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 
 const modificationSchema = z.object({
@@ -36,7 +38,6 @@ export default function Voitures() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
-  const [erreurPage, setErreurPage] = useState(null)
 
   const ouvrirEdition = (voiture) => {
     setEnEdition(voiture)
@@ -70,6 +71,7 @@ export default function Voitures() {
     setErreurGlobale(null)
     try {
       await api.put(`/voitures/${enEdition.id}`, resultat.data)
+      toast.success('Voiture modifiée.')
       setDialogueOuvert(false)
       recharger()
     } catch (e) {
@@ -80,12 +82,13 @@ export default function Voitures() {
   }
 
   const supprimer = async (voiture) => {
-    if (!window.confirm(`Supprimer la voiture ${voiture.code} ?`)) return
+    if (!(await confirmerSuppression(`Supprimer la voiture ${voiture.code} ?`))) return
     try {
       await api.delete(`/voitures/${voiture.id}`)
+      toast.success('Voiture supprimée.')
       recharger()
     } catch (e) {
-      setErreurPage(messageApi(e, 'Suppression impossible'))
+      toast.error(messageApi(e, 'Suppression impossible'))
     }
   }
 
@@ -99,9 +102,6 @@ export default function Voitures() {
         </p>
       </div>
 
-      {erreurPage && (
-        <AlerteErreur message={erreurPage} onReessayer={() => setErreurPage(null)} />
-      )}
       {erreur && <AlerteErreur message={message} onReessayer={recharger} />}
 
       <Card>

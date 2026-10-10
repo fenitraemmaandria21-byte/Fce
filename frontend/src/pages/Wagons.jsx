@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import AlerteErreur from '@/components/AlerteErreur'
@@ -18,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useApi } from '@/hooks/useApi'
+import { confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 
 const modificationSchema = z.object({
@@ -44,7 +46,6 @@ export default function Wagons() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
-  const [erreurPage, setErreurPage] = useState(null)
 
   const ouvrirEdition = (wagon) => {
     setEnEdition(wagon)
@@ -79,6 +80,7 @@ export default function Wagons() {
     setErreurGlobale(null)
     try {
       await api.put(`/wagons/${enEdition.id}`, resultat.data)
+      toast.success('Wagon modifié.')
       setDialogueOuvert(false)
       recharger()
     } catch (e) {
@@ -89,12 +91,13 @@ export default function Wagons() {
   }
 
   const supprimer = async (wagon) => {
-    if (!window.confirm(`Supprimer le wagon ${wagon.code} ?`)) return
+    if (!(await confirmerSuppression(`Supprimer le wagon ${wagon.code} ?`))) return
     try {
       await api.delete(`/wagons/${wagon.id}`)
+      toast.success('Wagon supprimé.')
       recharger()
     } catch (e) {
-      setErreurPage(messageApi(e, 'Suppression impossible'))
+      toast.error(messageApi(e, 'Suppression impossible'))
     }
   }
 
@@ -122,9 +125,6 @@ export default function Wagons() {
         </Select>
       </div>
 
-      {erreurPage && (
-        <AlerteErreur message={erreurPage} onReessayer={() => setErreurPage(null)} />
-      )}
       {erreur && <AlerteErreur message={message} onReessayer={recharger} />}
 
       <Card>

@@ -6,6 +6,7 @@ const {
   creerEnvoiSchema,
   modifierEnvoiSchema,
   creerArrivageSchema,
+  modifierArrivageSchema,
 } = require('../validators/marchandiseValidators');
 const ctrl = require('../controllers/marchandisesController');
 
@@ -21,10 +22,18 @@ router.put(
   validate(modifierEnvoiSchema),
   ctrl.modifierEnvoi
 );
+router.delete('/marchandises/:id', requireRole('SUPERADMIN', 'ADMIN'), ctrl.supprimerEnvoi);
 
 // Arrivages
 router.get('/arrivages', ctrl.listerArrivages);
 router.get('/arrivages/:id', ctrl.recupererArrivage);
 router.post('/arrivages', validate(creerArrivageSchema), ctrl.creerArrivage);
+router.put(
+  '/arrivages/:id',
+  requireRole('SUPERADMIN', 'ADMIN'),
+  validate(modifierArrivageSchema),
+  ctrl.modifierArrivage
+);
+router.delete('/arrivages/:id', requireRole('SUPERADMIN', 'ADMIN'), ctrl.supprimerArrivage);
 
 module.exports = router;

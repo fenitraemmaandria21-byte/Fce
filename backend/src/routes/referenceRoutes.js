@@ -24,7 +24,8 @@ router.delete('/tarifs/billets/:id', requireRole('SUPERADMIN'), referenceControl
 router.put('/tarifs/locations/:id', requireRole('SUPERADMIN'), referenceController.modifierTarifLocation);
 router.delete('/tarifs/locations/:id', requireRole('SUPERADMIN'), referenceController.supprimerTarifLocation);
 router.put('/trains/:id', requireRole('SUPERADMIN'), referenceController.modifierTrain);
-router.delete('/trains/:id', requireRole('SUPERADMIN'), referenceController.supprimerTrain);
+  router.post('/trains', requireRole('SUPERADMIN'), referenceController.creerTrain);
+  router.delete('/trains/:id', requireRole('SUPERADMIN'), referenceController.supprimerTrain);
 router.put('/voitures/:id', requireRole('SUPERADMIN'), referenceController.modifierVoiture);
 router.delete('/voitures/:id', requireRole('SUPERADMIN'), referenceController.supprimerVoiture);
 router.put('/wagons/:id', requireRole('SUPERADMIN'), referenceController.modifierWagon);

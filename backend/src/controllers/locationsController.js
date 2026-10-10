@@ -22,4 +22,8 @@ const changerStatut = asyncHandler(async (req, res) => {
   res.json(await locationsService.changerStatut(req.params.id, statut, motif, req.utilisateur));
 });
 
-module.exports = { lister, recuperer, creer, modifier, changerStatut };
+const supprimer = asyncHandler(async (req, res) => {
+  res.json(await locationsService.supprimer(req.params.id, req.utilisateur));
+});
+
+module.exports = { lister, recuperer, creer, modifier, changerStatut, supprimer };

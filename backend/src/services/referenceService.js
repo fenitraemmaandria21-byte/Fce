@@ -381,6 +381,45 @@ async function listerTrains() {
   });
 }
 
+// POST /api/trains — SUPERADMIN uniquement.
+async function creerTrain(donnees, appelant) {
+  if (!appelant || appelant.role !== 'SUPERADMIN') {
+    throw new ApiError(403, 'ACCES_REFUSE', 'Réservé au SUPERADMIN');
+  }
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const numero = donnees?.numero?.trim();
+    const origine = donnees?.origine?.trim();
+    const destination = donnees?.destination?.trim();
+    const jours = Array.isArray(donnees?.jours) ? donnees.jours : null;
+    if (!numero) throw new ApiError(400, 'NUMERO_REQUIS', 'Le numéro est requis');
+    if (!origine) throw new ApiError(400, 'ORIGINE_REQUISE', 'L’origine est requise');
+    if (!destination) {
+      throw new ApiError(400, 'DESTINATION_REQUISE', 'La destination est requise');
+    }
+    if (!jours || jours.length === 0) throw new ApiError(400, 'JOURS_REQUIS', 'Au moins un jour est requis');
+
+    const doublon = await prisma.train.findUnique({ where: { numero } });
+    if (doublon) {
+      throw new ApiError(409, 'NUMERO_EXISTANT', 'Ce numéro de train existe déjà');
+    }
+
+    const train = await prisma.train.create({
+      data: { numero, origine, destination, jours },
+    });
+
+    await journaliser({
+      utilisateurId: appelant.id,
+      action: 'CREATION_TRAIN',
+      entite: 'Train',
+      entiteId: train.id,
+      details: { numero, origine, destination, jours },
+    });
+
+    return train;
+  });
+}
+
 // PUT /api/trains/:id — SUPERADMIN uniquement.
 async function modifierTrain(id, donnees, appelant) {
   if (!appelant || appelant.role !== 'SUPERADMIN') {
@@ -719,6 +758,7 @@ module.exports = {
   supprimerTarifBillet,
   supprimerTarifLocation,
   listerTrains,
+  creerTrain,
   modifierTrain,
   supprimerTrain,
   listerVoitures,

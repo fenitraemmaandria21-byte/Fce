@@ -215,4 +215,42 @@ async function recuperer(id) {
   });
 }
 
-module.exports = { creer, modifier, lister, recuperer };
+// DELETE /api/marchandises/:id — suppression (bloquée si arrivages ou BRAN liés).
+async function supprimer(id, appelant) {
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const existant = await prisma.envoi.findUnique({
+      where: { id },
+      include: { bran: true, _count: { select: { arrivages: true } } },
+    });
+    if (!existant) throw new ApiError(404, 'ENVOI_INTROUVE', 'Envoi introuvable');
+    if (existant._count.arrivages > 0) {
+      throw new ApiError(
+        409,
+        'ENVOI_A_ARRIVAGES',
+        `Suppression impossible : ${existant._count.arrivages} arrivage(s) lié(s) à cet envoi.`
+      );
+    }
+    if (existant.bran) {
+      throw new ApiError(
+        409,
+        'ENVOI_A_BRAN',
+        'Suppression impossible : un BRAN est déjà émis pour cet envoi.'
+      );
+    }
+
+    await prisma.envoi.delete({ where: { id } });
+
+    await journaliser({
+      utilisateurId: appelant.id,
+      action: 'SUPPRESSION_ENVOI',
+      entite: 'Envoi',
+      entiteId: id,
+      details: { reference: existant.reference },
+    });
+
+    return { supprime: true };
+  });
+}
+
+module.exports = { creer, modifier, lister, recuperer, supprimer };

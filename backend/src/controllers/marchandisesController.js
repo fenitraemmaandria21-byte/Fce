@@ -18,6 +18,10 @@ const modifierEnvoi = asyncHandler(async (req, res) => {
   res.json(await marchandisesService.modifier(req.params.id, req.body, req.utilisateur));
 });
 
+const supprimerEnvoi = asyncHandler(async (req, res) => {
+  res.json(await marchandisesService.supprimer(req.params.id, req.utilisateur));
+});
+
 const listerArrivages = asyncHandler(async (req, res) => {
   res.json(await arrivagesService.lister(req));
 });
@@ -30,12 +34,23 @@ const creerArrivage = asyncHandler(async (req, res) => {
   res.status(201).json(await arrivagesService.creer(req.body, req.utilisateur));
 });
 
+const modifierArrivage = asyncHandler(async (req, res) => {
+  res.json(await arrivagesService.modifier(req.params.id, req.body, req.utilisateur));
+});
+
+const supprimerArrivage = asyncHandler(async (req, res) => {
+  res.json(await arrivagesService.supprimer(req.params.id, req.utilisateur));
+});
+
 module.exports = {
   listerEnvois,
   recupererEnvoi,
   creerEnvoi,
   modifierEnvoi,
+  supprimerEnvoi,
   listerArrivages,
   recupererArrivage,
   creerArrivage,
+  modifierArrivage,
+  supprimerArrivage,
 };

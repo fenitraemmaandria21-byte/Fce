@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import DialogueFormulaire from '@/components/DialogueFormulaire'
@@ -96,6 +97,7 @@ export default function Bran() {
         })),
         ...(envoiId && envoiId !== 'aucun' ? { envoiId } : {}),
       })
+      toast.success('BRAN créé.')
       setCreationOuverte(false)
       rechargerRef.current?.()
     } catch (erreur) {

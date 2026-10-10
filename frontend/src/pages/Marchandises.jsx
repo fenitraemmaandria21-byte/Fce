@@ -1,5 +1,6 @@
-import { Eye, Plus, Trash2 } from 'lucide-react'
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import DialogueFormulaire from '@/components/DialogueFormulaire'
@@ -25,8 +26,10 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useApi } from '@/hooks/useApi'
+import { confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 import { BadgeStatut, LIBELLES_STATUT, formatArgent, formatDate, formatNombre } from '@/lib/affichage'
+import { useAuth } from '@/context/AuthContext'
 
 const LIGNE_VIDE = {
   categorie: '',
@@ -80,6 +83,9 @@ const envoiSchema = z.object({
 const STATUTS = ['ENREGISTRE', 'FACTURE', 'ARRIVE', 'REMIS']
 
 export default function Marchandises() {
+  const { utilisateur } = useAuth()
+  const peutSupprimer = utilisateur && ['SUPERADMIN', 'ADMIN'].includes(utilisateur.role)
+
   const [statut, setStatut] = useState('tous')
   const [gareFiltre, setGareFiltre] = useState('toutes')
   const [creationOuverte, setCreationOuverte] = useState(false)
@@ -87,6 +93,7 @@ export default function Marchandises() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
+  const [edition, setEdition] = useState(null)
   const [detail, setDetail] = useState(null)
   const [detailComplet, setDetailComplet] = useState(null)
   const [detailChargement, setDetailChargement] = useState(false)
@@ -97,10 +104,46 @@ export default function Marchandises() {
   const gareListe = gares.donnees?.donnees || []
 
   const ouvrirCreation = () => {
+    setEdition(null)
     setFormulaire(ENVOI_VIDE)
     setErreurs({})
     setErreurGlobale(null)
     setCreationOuverte(true)
+  }
+
+  const ouvrirEdition = async (l) => {
+    setErreurs({})
+    setErreurGlobale(null)
+    try {
+      const { data } = await api.get(`/marchandises/${l.id}`)
+      setEdition(data)
+      setFormulaire({
+        expediteurNom: data.expediteurNom || '',
+        expediteurContact: data.expediteurContact || '',
+        destinataireNom: data.destinataireNom || '',
+        destinataireContact: data.destinataireContact || '',
+        gareOrigineId: data.gareOrigineId || 'aucune',
+        gareDestinationId: data.gareDestinationId || 'aucune',
+        nombreColis: String(data.nombreColis ?? 1),
+        dateEnvoi: data.dateEnvoi ? new Date(data.dateEnvoi).toISOString().slice(0, 10) : '',
+        observations: data.observations || '',
+        lignes:
+          data.lignes && data.lignes.length > 0
+            ? data.lignes.map((lg) => ({
+                categorie: lg.categorie || '',
+                designation: lg.designation || '',
+                quantite: lg.quantite != null ? String(lg.quantite) : '',
+                unite: lg.unite || '',
+                poids: lg.poids != null ? String(lg.poids) : '',
+                marque: lg.marque || '',
+                observation: lg.observation || '',
+              }))
+            : [{ ...LIGNE_VIDE }],
+      })
+      setCreationOuverte(true)
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Chargement de l’envoi impossible'))
+    }
   }
 
   const modifierChamp = (cle, valeur) => {
@@ -138,7 +181,7 @@ export default function Marchandises() {
     setErreurGlobale(null)
     try {
       const { dateEnvoi, gareOrigineId, gareDestinationId, lignes, ...reste } = resultat.data
-      await api.post('/marchandises', {
+      const corps = {
         ...reste,
         lignes: lignes.map((l) => ({
           categorie: l.categorie,
@@ -152,7 +195,14 @@ export default function Marchandises() {
         ...(dateEnvoi ? { dateEnvoi: new Date(dateEnvoi).toISOString() } : {}),
         ...(gareOrigineId && gareOrigineId !== 'aucune' ? { gareOrigineId } : {}),
         ...(gareDestinationId && gareDestinationId !== 'aucune' ? { gareDestinationId } : {}),
-      })
+      }
+      if (edition) {
+        await api.put(`/marchandises/${edition.id}`, corps)
+      } else {
+        await api.post('/marchandises', corps)
+      }
+      toast.success(edition ? 'Envoi modifié.' : 'Envoi créé.')
+      setEdition(null)
       setCreationOuverte(false)
       rechargerRef.current?.()
     } catch (erreur) {
@@ -177,6 +227,20 @@ export default function Marchandises() {
     }
   }
 
+  const supprimerEnvoi = async (l) => {
+    if (!(await confirmerSuppression(`Supprimer l’envoi ${l.reference || ''} ?`))) return
+    setEnCours(true)
+    try {
+      await api.delete(`/marchandises/${l.id}`)
+      toast.success('Envoi supprimé.')
+      rechargerRef.current?.()
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Suppression impossible'))
+    } finally {
+      setEnCours(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <PageTable
@@ -198,12 +262,12 @@ export default function Marchandises() {
                 Nouvel envoi
               </>
             }
-            titre="Nouvel envoi"
+            titre={edition ? 'Modifier l’envoi' : 'Nouvel envoi'}
             description="Le poids total et la référence seront complétés par le système."
             messageErreur={erreurGlobale}
             enCours={enCours}
             onSoumettre={soumettre}
-            libelleValider="Créer l’envoi"
+            libelleValider={edition ? 'Enregistrer' : 'Créer l’envoi'}
             large
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -432,9 +496,69 @@ export default function Marchandises() {
           { titre: 'Statut', rendre: (l) => <BadgeStatut statut={l.statut} /> },
         ]}
         rendreActions={(l) => (
-          <Button variant="ghost" size="sm" title="Détails" onClick={() => ouvrirDetail(l)}>
-            <Eye />
-          </Button>
+          <div className="flex justify-end gap-1">
+            <Button variant="ghost" size="sm" title="Détails" onClick={() => ouvrirDetail(l)}>
+              <Eye />
+            </Button>
+            {peutSupprimer && (
+              <Button
+                variant="ghost"
+                size="sm"
+                title="Modifier l’envoi"
+                onClick={() => ouvrirEdition(l)}
+              >
+                <Pencil className="size-4" />
+              </Button>
+            )}
+            {peutSupprimer && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive"
+                title="Supprimer l’envoi"
+                disabled={l._count?.arrivages > 0 || !!l.bran}
+                onClick={() => supprimerEnvoi(l)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            )}
+          </div>
+        )}
+        rendreCarte={(l, actions) => (
+          <div className="flex h-full flex-col gap-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-medium">{l.reference || '—'}</p>
+                <p className="text-sm text-muted-foreground">{formatDate(l.dateEnvoi)}</p>
+              </div>
+              <BadgeStatut statut={l.statut} />
+            </div>
+            <div className="flex flex-wrap gap-2 text-sm">
+              <span>
+                <span className="text-muted-foreground">Exp. </span>
+                {l.expediteurNom}
+              </span>
+              <span>
+                <span className="text-muted-foreground">Dest. </span>
+                {l.destinataireNom}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Colis</p>
+                <p>{formatNombre(l.nombreColis)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Poids (kg)</p>
+                <p>{l.poidsTotal != null ? formatNombre(Number(l.poidsTotal)) : '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Dest.</p>
+                <p>{l.gareDestination?.code || '—'}</p>
+              </div>
+            </div>
+            {actions && <div className="mt-auto flex justify-end">{actions}</div>}
+          </div>
         )}
       />
 

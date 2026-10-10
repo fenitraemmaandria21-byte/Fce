@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import AlerteErreur from '@/components/AlerteErreur'
@@ -11,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useApi } from '@/hooks/useApi'
+import { confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 
 const JOURS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
@@ -45,7 +47,14 @@ export default function Trains() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
-  const [erreurPage, setErreurPage] = useState(null)
+
+  const ouvrirCreation = () => {
+    setEnEdition(null)
+    setFormulaire({ numero: '', origine: '', destination: '', jours: [] })
+    setErreurs({})
+    setErreurGlobale(null)
+    setDialogueOuvert(true)
+  }
 
   const ouvrirEdition = (train) => {
     setEnEdition(train)
@@ -92,7 +101,12 @@ export default function Trains() {
     setEnCours(true)
     setErreurGlobale(null)
     try {
-      await api.put(`/trains/${enEdition.id}`, resultat.data)
+      if (enEdition) {
+        await api.put(`/trains/${enEdition.id}`, resultat.data)
+      } else {
+        await api.post('/trains', resultat.data)
+      }
+      toast.success(enEdition ? 'Train modifié.' : 'Train créé.')
       setDialogueOuvert(false)
       recharger()
     } catch (e) {
@@ -103,27 +117,31 @@ export default function Trains() {
   }
 
   const supprimer = async (train) => {
-    if (!window.confirm(`Supprimer le train ${train.numero} ?`)) return
+    if (!(await confirmerSuppression(`Supprimer le train ${train.numero} ?`))) return
     try {
       await api.delete(`/trains/${train.id}`)
+      toast.success('Train supprimé.')
       recharger()
     } catch (e) {
-      setErreurPage(messageApi(e, 'Suppression impossible'))
+      toast.error(messageApi(e, 'Suppression impossible'))
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Trains</h1>
-        <p className="text-sm text-muted-foreground">
-          Trains réguliers de la ligne et jours de circulation (données officielles FCE).
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold">Trains</h1>
+          <p className="text-sm text-muted-foreground">
+            Trains réguliers de la ligne et jours de circulation (données officielles FCE).
+          </p>
+        </div>
+        <Button onClick={ouvrirCreation}>
+          <Plus />
+          Ajouter un train
+        </Button>
       </div>
 
-      {erreurPage && (
-        <AlerteErreur message={erreurPage} onReessayer={() => setErreurPage(null)} />
-      )}
       {erreur && <AlerteErreur message={message} onReessayer={recharger} />}
 
       <Card>
@@ -166,7 +184,7 @@ export default function Trains() {
       <DialogueFormulaire
         ouvert={dialogueOuvert}
         onFermer={() => setDialogueOuvert(false)}
-        titre={enEdition ? `Modifier le train ${enEdition.numero}` : 'Modifier le train'}
+        titre={enEdition ? `Modifier le train ${enEdition.numero}` : 'Ajouter un train'}
         description="Numéro, trajet et jours de circulation. Un numéro déjà utilisé sera refusé."
         messageErreur={erreurGlobale}
         enCours={enCours}

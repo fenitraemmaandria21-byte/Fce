@@ -1,8 +1,14 @@
 const clientsService = require('../services/clientsService');
+const { asyncHandler } = require('../utils/db');
 
 // GET /api/clients
-async function lister(req, res) {
+const lister = asyncHandler(async (req, res) => {
   res.json(await clientsService.lister(req));
-}
+});
 
-module.exports = { lister };
+// DELETE /api/clients/:id
+const supprimer = asyncHandler(async (req, res) => {
+  res.json(await clientsService.supprimer(req.params.id, req.utilisateur));
+});
+
+module.exports = { lister, supprimer };

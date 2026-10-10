@@ -1,10 +1,12 @@
-import { Plus } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import DialogueFormulaire from '@/components/DialogueFormulaire'
 import PageTable from '@/components/PageTable'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -14,7 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useAuth } from '@/context/AuthContext'
 import { useApi } from '@/hooks/useApi'
+import { confirmerAction, confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 import { BadgeStatut, formatDate } from '@/lib/affichage'
 
@@ -39,12 +43,16 @@ const arrivageSchema = z.object({
 })
 
 export default function Arrivages() {
+  const { utilisateur } = useAuth()
+  const peutGerer = utilisateur && ['SUPERADMIN', 'ADMIN'].includes(utilisateur.role)
+
   const [statut, setStatut] = useState('tous')
   const [creationOuverte, setCreationOuverte] = useState(false)
   const [formulaire, setFormulaire] = useState(ARRIVAGE_VIDE)
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
+  const [edition, setEdition] = useState(null)
   const rechargerRef = useRef(null)
 
   const envois = useApi('/marchandises', { limit: 100 })
@@ -52,7 +60,23 @@ export default function Arrivages() {
   const gares = useApi('/gares', { limit: 100 })
 
   const ouvrirCreation = () => {
+    setEdition(null)
     setFormulaire(ARRIVAGE_VIDE)
+    setErreurs({})
+    setErreurGlobale(null)
+    setCreationOuverte(true)
+  }
+
+  const ouvrirEdition = (l) => {
+    setEdition(l)
+    setFormulaire({
+      envoiId: l.envoiId,
+      trainId: l.train?.id || 'aucun',
+      gareId: l.gare?.id || 'aucune',
+      dateArrivage: l.dateArrivage ? new Date(l.dateArrivage).toISOString().slice(0, 10) : '',
+      statut: l.statut,
+      observations: l.observations || '',
+    })
     setErreurs({})
     setErreurGlobale(null)
     setCreationOuverte(true)
@@ -74,16 +98,34 @@ export default function Arrivages() {
       setErreurGlobale(null)
       return
     }
+    const versRecue =
+      resultat.data.statut === 'RECUE' && (!edition || edition.statut !== 'RECUE')
+    if (versRecue) {
+      const confirme = await confirmerAction({
+        titre: 'Confirmer la réception',
+        texte: 'Cet arrivage « Reçue » fera passer l’envoi associé au statut ARRIVE.',
+        libelleConfirmer: 'Confirmer',
+        icone: 'question',
+      })
+      if (!confirme) return
+    }
     setEnCours(true)
     setErreurGlobale(null)
     try {
       const { dateArrivage, trainId, gareId, ...reste } = resultat.data
-      await api.post('/arrivages', {
+      const corps = {
         ...reste,
         dateArrivage: new Date(dateArrivage).toISOString(),
         ...(trainId && trainId !== 'aucun' ? { trainId } : {}),
         ...(gareId && gareId !== 'aucune' ? { gareId } : {}),
-      })
+      }
+      if (edition) {
+        await api.put(`/arrivages/${edition.id}`, corps)
+      } else {
+        await api.post('/arrivages', corps)
+      }
+      toast.success(edition ? 'Arrivage modifié.' : 'Arrivage enregistré.')
+      setEdition(null)
       setCreationOuverte(false)
       rechargerRef.current?.()
     } catch (erreur) {
@@ -93,8 +135,23 @@ export default function Arrivages() {
     }
   }
 
+  const supprimer = async (l) => {
+    if (!(await confirmerSuppression(`Supprimer l’arrivage du ${formatDate(l.dateArrivage)} ?`))) return
+    setEnCours(true)
+    try {
+      await api.delete(`/arrivages/${l.id}`)
+      toast.success('Arrivage supprimé.')
+      rechargerRef.current?.()
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Suppression impossible'))
+    } finally {
+      setEnCours(false)
+    }
+  }
+
   return (
-    <PageTable
+    <div className="space-y-4">
+      <PageTable
       titre="Arrivages"
       description="Réception des marchandises. Un arrivage « Reçue » fait passer l’envoi au statut ARRIVE."
       endpoint="/arrivages"
@@ -113,8 +170,12 @@ export default function Arrivages() {
               Enregistrer un arrivage
             </>
           }
-          titre="Enregistrer un arrivage"
-          description="La réception (statut « Reçue ») fait passer l’envoi au statut ARRIVE."
+          titre={edition ? "Modifier l'arrivage" : 'Enregistrer un arrivage'}
+          description={
+            edition
+              ? "La réception (statut « Reçue ») fait passer l'envoi au statut ARRIVE."
+              : "La réception (statut « Reçue ») fait passer l'envoi au statut ARRIVE."
+          }
           messageErreur={erreurGlobale}
           enCours={enCours}
           onSoumettre={soumettre}
@@ -122,8 +183,12 @@ export default function Arrivages() {
         >
           <div className="space-y-2">
             <Label>Envoi</Label>
-            <Select value={formulaire.envoiId} onValueChange={(v) => modifierChamp('envoiId', v)}>
-              <SelectTrigger>
+            <Select
+              value={formulaire.envoiId}
+              onValueChange={(v) => modifierChamp('envoiId', v)}
+              disabled={!!edition}
+            >
+              <SelectTrigger disabled={!!edition}>
                 <SelectValue placeholder="Choisir un envoi" />
               </SelectTrigger>
               <SelectContent>
@@ -232,6 +297,65 @@ export default function Arrivages() {
         { titre: 'Gare', rendre: (l) => (l.gare?.code ? <Badge variant="outline">{l.gare.code}</Badge> : '—') },
         { titre: 'Statut', rendre: (l) => <BadgeStatut statut={l.statut} /> },
       ]}
+      rendreActions={(l) => (
+        <div className="flex justify-end gap-1">
+          {peutGerer && (
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Modifier"
+              onClick={() => ouvrirEdition(l)}
+            >
+              <Pencil className="size-4" />
+            </Button>
+          )}
+          {peutGerer && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive"
+              title="Supprimer l’arrivage"
+              onClick={() => supprimer(l)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          )}
+        </div>
+      )}
+      rendreCarte={(l, actions) => (
+        <div className="flex h-full flex-col gap-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="font-medium">{l.envoi?.reference || '—'}</p>
+              <p className="text-sm text-muted-foreground">{l.envoi?.destinataireNom || '—'}</p>
+            </div>
+            <BadgeStatut statut={l.statut} />
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Date d’arrivage</p>
+              <p>{formatDate(l.dateArrivage)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Train</p>
+              <p>{l.train?.numero || '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Gare</p>
+              <p>{l.gare?.code || '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Envoi</p>
+              <p className="truncate">{l.envoi?.reference || '—'}</p>
+            </div>
+          </div>
+          {l.observations && (
+            <p className="text-sm text-muted-foreground">{l.observations}</p>
+          )}
+          {actions && <div className="mt-auto flex justify-end">{actions}</div>}
+        </div>
+      )}
     />
+    </div>
   )
 }

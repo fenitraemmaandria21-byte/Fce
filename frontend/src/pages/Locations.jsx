@@ -1,5 +1,6 @@
-import { Check, Plus, X } from 'lucide-react'
+import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import DialogueFormulaire from '@/components/DialogueFormulaire'
@@ -17,6 +18,7 @@ import {
 } from '@/components/ui/select'
 import { useAuth } from '@/context/AuthContext'
 import { useApi } from '@/hooks/useApi'
+import { confirmerSuppression, demanderMotif } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 import {
   BadgeStatut,
@@ -85,11 +87,6 @@ const locationSchema = z
     }
   })
 
-const statutSchema = z.object({
-  statut: z.enum(['VALIDEE', 'REFUSEE']),
-  motif: z.string().trim().max(500).optional(),
-})
-
 export default function Locations() {
   const { utilisateur } = useAuth()
   const peutValider = utilisateur && ['SUPERADMIN', 'ADMIN'].includes(utilisateur.role)
@@ -101,19 +98,51 @@ export default function Locations() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
-  const [decision, setDecision] = useState(null)
-  const [decisionForm, setDecisionForm] = useState({ statut: 'VALIDEE', motif: '' })
-  const [decisionErreur, setDecisionErreur] = useState(null)
+  const [edition, setEdition] = useState(null)
   const rechargerRef = useRef(null)
 
   const zones = useApi('/zones')
   const zoneListe = zones.donnees?.donnees || []
 
+  const versDatetimeLocal = (iso) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
   const ouvrirCreation = () => {
+    setEdition(null)
     setFormulaire(LOCATION_VIDE)
     setErreurs({})
     setErreurGlobale(null)
     setCreationOuverte(true)
+  }
+
+  const ouvrirEdition = async (l) => {
+    setErreurs({})
+    setErreurGlobale(null)
+    try {
+      const { data } = await api.get(`/locations/${l.id}`)
+      setEdition(data)
+      setFormulaire({
+        type: data.type || 'DRAISINE',
+        client_nom: data.client?.nom || '',
+        client_contact: data.client?.contact || '',
+        client_adresse: data.client?.adresse || '',
+        zoneId: data.zoneId || '',
+        depart: data.depart || '',
+        formule: data.formule || 'aucune',
+        allerRetour: data.allerRetour ? 'oui' : 'non',
+        personnes: String(data.personnes ?? 1),
+        dateDebut: versDatetimeLocal(data.dateDebut),
+        dateFin: data.dateFin ? versDatetimeLocal(data.dateFin) : '',
+        observations: data.observations || '',
+      })
+      setCreationOuverte(true)
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Chargement de la location impossible'))
+    }
   }
 
   const modifierChamp = (cle, valeur) => {
@@ -149,7 +178,7 @@ export default function Locations() {
         dateFin,
         observations,
       } = resultat.data
-      await api.post('/locations', {
+      const corps = {
         type,
         client: {
           nom: client_nom,
@@ -164,7 +193,14 @@ export default function Locations() {
         dateDebut: new Date(dateDebut).toISOString(),
         ...(dateFin ? { dateFin: new Date(dateFin).toISOString() } : {}),
         ...(observations ? { observations } : {}),
-      })
+      }
+      if (edition) {
+        await api.put(`/locations/${edition.id}`, corps)
+      } else {
+        await api.post('/locations', corps)
+      }
+      toast.success(edition ? 'Location modifiée.' : 'Demande de location créée.')
+      setEdition(null)
       setCreationOuverte(false)
       rechargerRef.current?.()
     } catch (erreur) {
@@ -174,26 +210,39 @@ export default function Locations() {
     }
   }
 
-  const ouvrirDecision = (ligne, statut) => {
-    setDecision({ ligne, statut })
-    setDecisionForm({ statut, motif: '' })
-    setDecisionErreur(null)
-  }
-
-  const soumettreDecision = async () => {
-    const resultat = statutSchema.safeParse(decisionForm)
-    if (!resultat.success) {
-      setDecisionErreur('Motif invalide (500 caractères max.)')
-      return
-    }
+  const decider = async (ligne, statut) => {
+    const valide = statut === 'VALIDEE'
+    const motif = await demanderMotif({
+      titre: valide ? 'Valider la location' : 'Refuser la location',
+      texte: `${ligne.client?.nom || 'Client'} — ${LIBELLES_TYPE_LOCATION[ligne.type] || ligne.type}${ligne.montant != null ? ` (${formatArgent(ligne.montant)})` : ''}`,
+      libelleConfirmer: valide ? 'Valider' : 'Refuser',
+      couleurConfirmer: valide ? '#16a34a' : '#dc2626',
+    })
+    if (motif === null) return
     setEnCours(true)
-    setDecisionErreur(null)
     try {
-      await api.patch(`/locations/${decision.ligne.id}/statut`, resultat.data)
-      setDecision(null)
+      await api.patch(`/locations/${ligne.id}/statut`, {
+        statut,
+        ...(motif ? { motif } : {}),
+      })
+      toast.success(valide ? 'Location validée.' : 'Location refusée.')
       rechargerRef.current?.()
     } catch (erreur) {
-      setDecisionErreur(messageApi(erreur, 'Décision impossible'))
+      toast.error(messageApi(erreur, 'Décision impossible'))
+    } finally {
+      setEnCours(false)
+    }
+  }
+
+  const supprimer = async (l) => {
+    if (!(await confirmerSuppression(`Supprimer la location de ${l.client?.nom || 'ce client'} ?`))) return
+    setEnCours(true)
+    try {
+      await api.delete(`/locations/${l.id}`)
+      toast.success('Location supprimée.')
+      rechargerRef.current?.()
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Suppression impossible'))
     } finally {
       setEnCours(false)
     }
@@ -231,7 +280,7 @@ export default function Locations() {
                 Nouvelle location
               </>
             }
-            titre="Nouvelle demande de location"
+            titre={edition ? 'Modifier la location' : 'Nouvelle demande de location'}
             description={
               formulaire.type === 'BATIMENT' || formulaire.type === 'TERRAIN'
                 ? 'Montant appliqué automatiquement : bâtiment 8 000 000 Ar ; terrain 5 000 000 Ar.'
@@ -240,7 +289,7 @@ export default function Locations() {
             messageErreur={erreurGlobale}
             enCours={enCours}
             onSoumettre={soumettre}
-            libelleValider="Créer la demande"
+            libelleValider={edition ? 'Enregistrer' : 'Créer la demande'}
             large
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -484,59 +533,106 @@ export default function Locations() {
           },
           { titre: 'Statut', rendre: (l) => <BadgeStatut statut={l.statut} /> },
         ]}
-        rendreActions={
-          peutValider
-            ? (l) =>
-                l.statut === 'EN_ATTENTE' ? (
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-fce-700"
-                      title="Valider"
-                      onClick={() => ouvrirDecision(l, 'VALIDEE')}
-                    >
-                      <Check />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive"
-                      title="Refuser"
-                      onClick={() => ouvrirDecision(l, 'REFUSEE')}
-                    >
-                      <X />
-                    </Button>
-                  </div>
-                ) : null
-            : null
-        }
-      />
-
-      {decision && (
-        <DialogueFormulaire
-          ouvert
-          onFermer={() => setDecision(null)}
-          titre={decision.statut === 'VALIDEE' ? 'Valider la location' : 'Refuser la location'}
-          description={`${decision.ligne.client?.nom} — ${LIBELLES_TYPE_LOCATION[decision.ligne.type]}${decision.ligne.montant != null ? ` (${formatArgent(decision.ligne.montant)})` : ''}`}
-          messageErreur={decisionErreur}
-          enCours={enCours}
-          onSoumettre={soumettreDecision}
-          libelleValider={decision.statut === 'VALIDEE' ? 'Valider' : 'Refuser'}
-        >
-          <div className="space-y-2">
-            <Label>Motif (optionnel)</Label>
-            <Input
-              value={decisionForm.motif}
-              onChange={(e) => setDecisionForm((f) => ({ ...f, motif: e.target.value }))}
-              placeholder="Justification"
-            />
+        rendreActions={(l) => (
+          <div className="flex justify-end gap-1">
+            {peutValider && l.statut === 'EN_ATTENTE' && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-fce-700"
+                  title="Valider"
+                  onClick={() => decider(l, 'VALIDEE')}
+                >
+                  <Check />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  title="Refuser"
+                  onClick={() => decider(l, 'REFUSEE')}
+                >
+                  <X />
+                </Button>
+              </>
+            )}
+            {peutValider && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive"
+                title="Supprimer la location"
+                onClick={() => supprimer(l)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            )}
+            {peutValider && l.statut === 'EN_ATTENTE' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                title="Modifier la location"
+                onClick={() => ouvrirEdition(l)}
+              >
+                <Pencil className="size-4" />
+              </Button>
+            )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            La décision est enregistrée dans le journal avec l’auteur.
-          </p>
-        </DialogueFormulaire>
-      )}
+        )}
+        rendreCarte={(l, actions) => (
+          <div className="flex h-full flex-col gap-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-medium">{l.client?.nom || 'Client inconnu'}</p>
+                {l.client?.contact && (
+                  <p className="text-sm text-muted-foreground">{l.client.contact}</p>
+                )}
+              </div>
+              <BadgeStatut statut={l.statut} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Type</p>
+                <p>{LIBELLES_TYPE_LOCATION[l.type] || l.type}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Zone</p>
+                <p>{l.zone?.code || '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Formule</p>
+                <p>
+                  {l.depart
+                    ? `${l.depart}${l.formule ? ` — ${afficherFormule(l)}` : ''}`
+                    : afficherFormule(l)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Personnes</p>
+                <p>{l.personnes}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Début</p>
+                <p>{formatDate(l.dateDebut, true)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Montant</p>
+                <p className="tabular-nums">
+                  {l.montant != null ? (
+                    formatArgent(l.montant)
+                  ) : (
+                    <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                      À valider
+                    </Badge>
+                  )}
+                </p>
+              </div>
+            </div>
+            {actions && <div className="mt-auto flex justify-end">{actions}</div>}
+          </div>
+        )}
+      />
     </div>
   )
 }

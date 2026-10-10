@@ -179,6 +179,7 @@ async function modifier(id, donnees, appelant) {
         dateVoyage: new Date(donnees.dateVoyage),
         trainId: train ? train.id : null,
         voitureId: donnees.voitureId || null,
+        place: donnees.place || null,
       },
       include: {
         destination: { select: { code: true, nom: true } },
@@ -318,4 +319,29 @@ async function annuler(id, appelant) {
   });
 }
 
-module.exports = { creer, modifier, lister, recuperer, annuler };
+// DELETE /api/billets/:id — suppression d'un billet (SUPERADMIN/ADMIN).
+async function supprimer(id, appelant) {
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const existant = await prisma.billet.findUnique({ where: { id } });
+    if (!existant) throw new ApiError(404, 'BILLET_INTROUVABLE', 'Billet introuvable');
+
+    await prisma.billet.delete({ where: { id } });
+
+    await journaliser({
+      utilisateurId: appelant.id,
+      action: 'SUPPRESSION_BILLET',
+      entite: 'Billet',
+      entiteId: id,
+      details: {
+        numero: existant.numero,
+        voyageurNom: existant.voyageurNom,
+        statut: existant.statut,
+      },
+    });
+
+    return { supprime: true };
+  });
+}
+
+module.exports = { creer, modifier, lister, recuperer, annuler, supprimer };

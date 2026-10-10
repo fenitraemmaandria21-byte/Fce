@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import DialogueFormulaire from '@/components/DialogueFormulaire'
@@ -55,6 +56,7 @@ export default function Rfe() {
     setErreurGlobale(null)
     try {
       await api.post('/rfe', resultat.data)
+      toast.success('RFE créé.')
       setCreationOuverte(false)
       rechargerRef.current?.()
     } catch (erreur) {

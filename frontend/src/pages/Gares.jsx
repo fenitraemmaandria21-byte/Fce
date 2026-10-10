@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, Pencil, Search, Trash2 } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import AlerteErreur from '@/components/AlerteErreur'
@@ -26,6 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useApi } from '@/hooks/useApi'
+import { confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 
 const ZONES = ['Z1', 'Z2', 'Z3', 'Z4']
@@ -64,7 +66,6 @@ export default function Gares() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
-  const [erreurPage, setErreurPage] = useState(null)
 
   useEffect(() => {
     const minuteur = setTimeout(() => {
@@ -118,6 +119,7 @@ export default function Gares() {
       const charge = { ...resultat.data }
       if (!charge.nom) charge.nom = null
       await api.put(`/gares/${enEdition.id}`, charge)
+      toast.success('Gare modifiée.')
       setDialogueOuvert(false)
       recharger()
     } catch (e) {
@@ -128,12 +130,13 @@ export default function Gares() {
   }
 
   const supprimer = async (gare) => {
-    if (!window.confirm(`Supprimer la gare ${gare.code} (${gare.nom || 'sans nom'}) ?`)) return
+    if (!(await confirmerSuppression(`Supprimer la gare ${gare.code} (${gare.nom || 'sans nom'}) ?`))) return
     try {
       await api.delete(`/gares/${gare.id}`)
+      toast.success('Gare supprimée.')
       recharger()
     } catch (e) {
-      setErreurPage(messageApi(e, 'Suppression impossible'))
+      toast.error(messageApi(e, 'Suppression impossible'))
     }
   }
 
@@ -176,9 +179,6 @@ export default function Gares() {
         </div>
       </div>
 
-      {erreurPage && (
-        <AlerteErreur message={erreurPage} onReessayer={() => setErreurPage(null)} />
-      )}
       {erreur && (
         <AlerteErreur
           message={message}

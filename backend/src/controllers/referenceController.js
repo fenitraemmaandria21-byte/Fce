@@ -65,6 +65,10 @@ const modifierTrain = asyncHandler(async (req, res) => {
   res.json(await referenceService.modifierTrain(req.params.id, req.body, req.utilisateur));
 });
 
+const creerTrain = asyncHandler(async (req, res) => {
+  res.json(await referenceService.creerTrain(req.body, req.utilisateur));
+});
+
 const supprimerTrain = asyncHandler(async (req, res) => {
   res.json(await referenceService.supprimerTrain(req.params.id, req.utilisateur));
 });
@@ -122,6 +126,7 @@ module.exports = {
   supprimerTarifBillet,
   supprimerTarifLocation,
   listerTrains,
+  creerTrain,
   modifierTrain,
   supprimerTrain,
   listerVoitures,

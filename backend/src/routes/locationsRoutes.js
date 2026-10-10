@@ -33,4 +33,7 @@ router.patch(
   locationsController.changerStatut
 );
 
+// Suppression : SUPERADMIN, ADMIN
+router.delete('/:id', requireRole('SUPERADMIN', 'ADMIN'), locationsController.supprimer);
+
 module.exports = router;

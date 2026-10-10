@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { RefreshCw, Search } from 'lucide-react'
+import { LayoutGrid, List, RefreshCw, Search } from 'lucide-react'
 
 import AlerteErreur from '@/components/AlerteErreur'
 import Pagination from '@/components/Pagination'
@@ -14,10 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useApi } from '@/hooks/useApi'
 
 // Page de liste paginée avec recherche, filtres et actions par ligne.
 // filtres : [{ cle, valeur, options:[{valeur,libelle}], onChanger, largeur }]
+// rendreCarte : (ligne, actions) => JSX — affiche une vue « Carte » avec bascule.
 export default function PageTable({
   titre,
   description,
@@ -30,6 +32,7 @@ export default function PageTable({
   messageVide = 'Aucune donnée.',
   actions = null,
   rendreActions = null,
+  rendreCarte = null,
   aideErreur,
   libelleNombre = 'élément(s)',
   apiRef = null,
@@ -37,6 +40,7 @@ export default function PageTable({
   const [rechercheSaisie, setRechercheSaisie] = useState('')
   const [rechercheActive, setRechercheActive] = useState('')
   const [page, setPage] = useState(1)
+  const [vue, setVue] = useState('tableau')
 
   useEffect(() => {
     const minuteur = setTimeout(() => {
@@ -98,7 +102,7 @@ export default function PageTable({
         </div>
       </div>
 
-      {(recherche || filtres.length > 0) && (
+      {(recherche || filtres.length > 0 || rendreCarte) && (
         <div className="flex flex-wrap items-center gap-2">
           {recherche && (
             <div className="relative">
@@ -132,6 +136,30 @@ export default function PageTable({
               </SelectContent>
             </Select>
           ))}
+          {rendreCarte && (
+            <div
+              className="ml-auto flex items-center gap-1 rounded-md border border-foreground/20 p-1"
+              role="group"
+              aria-label="Mode d'affichage"
+            >
+              <Button
+                variant={vue === 'carte' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setVue('carte')}
+              >
+                <LayoutGrid className="size-4" />
+                Carte
+              </Button>
+              <Button
+                variant={vue === 'tableau' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setVue('tableau')}
+              >
+                <List className="size-4" />
+                Tableau
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -143,16 +171,54 @@ export default function PageTable({
         />
       )}
 
-      <Card>
-        <CardContent className="p-0">
-          <SectionListe
-            colonnes={colonnesAffichees}
-            chargement={chargement}
-            lignes={lignes}
-            messageVide={erreur ? 'Données indisponibles.' : messageVide}
-          />
-        </CardContent>
-      </Card>
+      {vue === 'carte' && rendreCarte ? (
+        <div>
+          {chargement ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <Skeleton className="h-5 w-2/3" />
+                      <Skeleton className="h-5 w-20" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-4/5" />
+                    <Skeleton className="h-4 w-3/5" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : lignes.length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                {erreur ? 'Données indisponibles.' : messageVide}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {lignes.map((ligne) => (
+                <Card key={ligne.id} className="h-full">
+                  <CardContent className="flex h-full flex-col gap-3 p-4">
+                    {rendreCarte(ligne, rendreActions && rendreActions(ligne))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <SectionListe
+              colonnes={colonnesAffichees}
+              chargement={chargement}
+              lignes={lignes}
+              messageVide={erreur ? 'Données indisponibles.' : messageVide}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {pagination && !erreur && (
         <Pagination

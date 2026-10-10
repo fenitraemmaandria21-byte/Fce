@@ -1,5 +1,6 @@
-import { Plus } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import DialogueFormulaire from '@/components/DialogueFormulaire'
@@ -16,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { useAuth } from '@/context/AuthContext'
 import { useApi } from '@/hooks/useApi'
+import { confirmerAction, confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 import {
   BadgeStatut,
@@ -85,19 +87,45 @@ export default function Billets() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
-  const [aAnnuler, setAAnnuler] = useState(null)
-  const [annulationErreur, setAnnulationErreur] = useState(null)
+  const [edition, setEdition] = useState(null)
   const rechargerRef = useRef(null)
 
   const gares = useApi('/gares', { limit: 100 })
   const trains = useApi('/trains')
   const voitures = useApi('/voitures')
 
+  const versDateInput = (iso) => (iso ? new Date(iso).toISOString().slice(0, 10) : '')
+
   const ouvrirVente = () => {
+    setEdition(null)
     setFormulaire(VENTE_VIDE)
     setErreurs({})
     setErreurGlobale(null)
     setVenteOuverte(true)
+  }
+
+  const ouvrirEdition = async (l) => {
+    setErreurs({})
+    setErreurGlobale(null)
+    try {
+      const { data } = await api.get(`/billets/${l.id}`)
+      setEdition(data)
+      setFormulaire({
+        voyageurNom: data.voyageurNom || '',
+        voyageurIdentite: data.voyageurIdentite || '',
+        typeIdentite: data.typeIdentite || 'CIN',
+        categorie: data.categorie || 'ADULTE',
+        destinationId: data.destinationId || data.destination?.id || '',
+        classe: data.classe || 'PREMIERE_CLASSE',
+        dateVoyage: versDateInput(data.dateVoyage),
+        trainId: data.trainId || 'aucun',
+        voitureId: data.voitureId || 'aucune',
+        place: data.place || '',
+      })
+      setVenteOuverte(true)
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Chargement du billet impossible'))
+    }
   }
 
   const modifierChamp = (cle, valeur) => {
@@ -120,13 +148,20 @@ export default function Billets() {
     setErreurGlobale(null)
     try {
       const { dateVoyage, trainId, voitureId, place, ...reste } = resultat.data
-      await api.post('/billets', {
+      const corps = {
         ...reste,
         dateVoyage: new Date(dateVoyage).toISOString(),
         ...(trainId && trainId !== 'aucun' ? { trainId } : {}),
         ...(voitureId && voitureId !== 'aucune' ? { voitureId } : {}),
         ...(place ? { place } : {}),
-      })
+      }
+      if (edition) {
+        await api.put(`/billets/${edition.id}`, corps)
+      } else {
+        await api.post('/billets', corps)
+      }
+      toast.success(edition ? 'Billet modifié.' : 'Billet vendu.')
+      setEdition(null)
       setVenteOuverte(false)
       rechargerRef.current?.()
     } catch (erreur) {
@@ -136,15 +171,37 @@ export default function Billets() {
     }
   }
 
-  const annuler = async () => {
+  const annuler = async (billet) => {
+    const confirme = await confirmerAction({
+      titre: 'Annuler le billet',
+      texte: `Billet ${billet.numero || ''} de ${billet.voyageurNom} (${formatArgent(billet.tarif)}). Le billet passera au statut « Annulé » et sera exclu des recettes.`,
+      libelleConfirmer: 'Confirmer l’annulation',
+      icone: 'warning',
+      couleurConfirmer: '#dc2626',
+    })
+    if (!confirme) return
     setEnCours(true)
-    setAnnulationErreur(null)
     try {
-      await api.post(`/billets/${aAnnuler.id}/annuler`)
-      setAAnnuler(null)
+      await api.post(`/billets/${billet.id}/annuler`)
+      toast.success('Billet annulé.')
       rechargerRef.current?.()
     } catch (erreur) {
-      setAnnulationErreur(messageApi(erreur, "Annulation impossible"))
+      toast.error(messageApi(erreur, 'Annulation impossible'))
+    } finally {
+      setEnCours(false)
+    }
+  }
+
+  const supprimer = async (l) => {
+    if (!(await confirmerSuppression(`Supprimer le billet ${l.numero || ''} de ${l.voyageurNom} ?`))) return
+    setEnCours(true)
+    try {
+      await api.delete(`/billets/${l.id}`)
+      toast.success('Billet supprimé.')
+      rechargerRef.current?.()
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Suppression impossible'))
+    } finally {
       setEnCours(false)
     }
   }
@@ -175,12 +232,12 @@ export default function Billets() {
                 Vendre un billet
               </>
             }
-            titre="Vendre un billet"
+            titre={edition ? 'Modifier le billet' : 'Vendre un billet'}
             description="Tarif appliqué automatiquement d’après la destination, le type de voyageur et la classe."
             messageErreur={erreurGlobale}
             enCours={enCours}
             onSoumettre={soumettreVente}
-            libelleValider="Vendre"
+            libelleValider={edition ? 'Enregistrer' : 'Vendre'}
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -396,44 +453,79 @@ export default function Billets() {
           { titre: 'Date voyage', rendre: (l) => formatDate(l.dateVoyage) },
           { titre: 'Statut', rendre: (l) => <BadgeStatut statut={l.statut} /> },
         ]}
-        rendreActions={
-          peutAnnuler
-            ? (l) =>
-                l.statut === 'VENDU' ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive"
-                    title="Annuler le billet"
-                    onClick={() => {
-                      setAnnulationErreur(null)
-                      setAAnnuler(l)
-                    }}
-                  >
-                    Annuler
-                  </Button>
-                ) : null
-            : null
-        }
+        rendreActions={(l) => (
+          <div className="flex justify-end gap-1">
+            {peutAnnuler && l.statut === 'VENDU' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive"
+                title="Annuler le billet"
+                onClick={() => annuler(l)}
+              >
+                Annuler
+              </Button>
+            )}
+            {peutAnnuler && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive"
+                title="Supprimer le billet"
+                onClick={() => supprimer(l)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            )}
+            {peutAnnuler && l.statut !== 'ANNULE' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                title="Modifier le billet"
+                onClick={() => ouvrirEdition(l)}
+              >
+                <Pencil className="size-4" />
+              </Button>
+            )}
+          </div>
+        )}
+        rendreCarte={(l, actions) => (
+          <div className="flex h-full flex-col gap-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-medium tabular-nums">{l.numero || '—'}</p>
+                <p className="text-sm">
+                  {l.voyageurNom}{' '}
+                  <span className="text-muted-foreground">({l.voyageurIdentite})</span>
+                </p>
+              </div>
+              <BadgeStatut statut={l.statut} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Destination</p>
+                <p>
+                  {l.destination?.code}{' '}
+                  <span className="text-muted-foreground">{l.zone?.code}</span>
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Classe</p>
+                <p>{LIBELLES_CLASSE[l.classe] || l.classe}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Date voyage</p>
+                <p>{formatDate(l.dateVoyage)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Tarif</p>
+                <p className="tabular-nums">{facturetarif(l)}</p>
+              </div>
+            </div>
+            {actions && <div className="mt-auto flex justify-end">{actions}</div>}
+          </div>
+        )}
       />
-
-      {aAnnuler && (
-        <DialogueFormulaire
-          ouvert
-          onFermer={() => setAAnnuler(null)}
-          titre="Annuler le billet"
-          description={`Billet ${aAnnuler.numero || ''} de ${aAnnuler.voyageurNom} (${formatArgent(aAnnuler.tarif)}).`}
-          messageErreur={annulationErreur}
-          enCours={enCours}
-          onSoumettre={annuler}
-          libelleValider="Confirmer l’annulation"
-        >
-          <p className="text-sm text-muted-foreground">
-            Le billet passera au statut « Annulé » et sera exclu des recettes.
-            Cette action est enregistrée dans le journal.
-          </p>
-        </DialogueFormulaire>
-      )}
     </div>
   )
 }

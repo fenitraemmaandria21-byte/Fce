@@ -10,6 +10,7 @@ import {
   TrainFront,
   Trash2,
 } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import AlerteErreur from '@/components/AlerteErreur'
@@ -28,6 +29,7 @@ import Tarifs from '@/pages/Tarifs'
 import Trains from '@/pages/Trains'
 import Voitures from '@/pages/Voitures'
 import Wagons from '@/pages/Wagons'
+import { confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 
 const modificationSchema = z.object({
@@ -44,7 +46,6 @@ function ParametresSysteme() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
-  const [erreurPage, setErreurPage] = useState(null)
 
   const ouvrirEdition = (parametre) => {
     setEnEdition(parametre)
@@ -69,6 +70,7 @@ function ParametresSysteme() {
     setErreurGlobale(null)
     try {
       await api.put(`/parametres/${encodeURIComponent(enEdition.cle)}`, resultat.data)
+      toast.success('Paramètre modifié.')
       setDialogueOuvert(false)
       recharger()
     } catch (e) {
@@ -80,12 +82,13 @@ function ParametresSysteme() {
 
   const supprimer = async (parametre) => {
     const libelle = LIBELLES_PARAMETRE[parametre.cle] || parametre.cle
-    if (!window.confirm(`Supprimer le paramètre « ${libelle} » ?`)) return
+    if (!(await confirmerSuppression(`Supprimer le paramètre « ${libelle} » ?`))) return
     try {
       await api.delete(`/parametres/${encodeURIComponent(parametre.cle)}`)
+      toast.success('Paramètre supprimé.')
       recharger()
     } catch (e) {
-      setErreurPage(messageApi(e, 'Suppression impossible'))
+      toast.error(messageApi(e, 'Suppression impossible'))
     }
   }
 
@@ -116,9 +119,6 @@ function ParametresSysteme() {
 
   return (
     <div className="space-y-6">
-      {erreurPage && (
-        <AlerteErreur message={erreurPage} onReessayer={() => setErreurPage(null)} />
-      )}
       {erreur && (
         <AlerteErreur message={message} onReessayer={recharger} />
       )}
