@@ -69,7 +69,7 @@ const SECTIONS = [
       'Exploitation → Marchandises → Nouvel envoi.',
       'Renseignez expéditeur, destinataire, nombre de colis et les lignes (nature, poids…).',
       'Le poids total est calculé automatiquement à partir des lignes.',
-      'Un envoi lié à un BRAN ou ayant des arrivages ne peut pas être supprimé.',
+      'La suppression d’un envoi supprime aussi son BRAN ; elle est bloquée s’il possède des arrivages.',
     ],
   },
   {
@@ -120,7 +120,7 @@ const ROLES = [
 const DEPANNAGE = [
   ['« API injoignable »', 'Vérifiez que le serveur (Docker) est démarré.'],
   ['Renvoyé à la connexion', 'Jeton expiré — reconnectez-vous.'],
-  ['Bouton Supprimer inactif', 'Suppression interdite (lien BRAN/RFE ou arrivages).'],
+  ['Bouton Supprimer inactif', 'Suppression interdite (arrivages liés, statut verrouillé…).'],
   ['Donnée « À valider »', 'Valeur du référentiel non encore confirmée.'],
 ]
 

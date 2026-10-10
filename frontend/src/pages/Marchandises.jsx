@@ -88,9 +88,9 @@ export default function Marchandises() {
   const peutSupprimer = utilisateur && ['SUPERADMIN', 'ADMIN'].includes(utilisateur.role)
 
   const raisonSuppression = (l) => {
-    if (l.bran) return 'Suppression impossible : un BRAN est émis pour cet envoi.'
     if (l._count?.arrivages > 0)
       return `Suppression impossible : ${l._count.arrivages} arrivage(s) lié(s) à cet envoi.`
+    if (l.bran) return 'Supprimer l’envoi (le BRAN émis sera aussi supprimé)'
     return 'Supprimer l’envoi'
   }
 
@@ -251,11 +251,23 @@ export default function Marchandises() {
   }
 
   const supprimerEnvoi = async (l) => {
-    if (!(await confirmerSuppression(`Supprimer l’envoi ${l.reference || ''} ?`))) return
+    const avertissementBran = l.bran
+      ? '\n\nLe BRAN émis pour cet envoi sera également supprimé.'
+      : ''
+    if (
+      !(await confirmerSuppression(
+        `Supprimer l’envoi ${l.reference || ''} ?${avertissementBran}`
+      ))
+    )
+      return
     setEnCours(true)
     try {
-      await api.delete(`/marchandises/${l.id}`)
-      toast.success('Envoi supprimé.')
+      const { data } = await api.delete(`/marchandises/${l.id}`)
+      toast.success(
+        data?.branSupprime
+          ? 'Envoi et BRAN supprimés.'
+          : 'Envoi supprimé.'
+      )
       rechargerRef.current?.()
     } catch (erreur) {
       toast.error(messageApi(erreur, 'Suppression impossible'))
@@ -632,7 +644,7 @@ export default function Marchandises() {
                   size="sm"
                   className="text-destructive"
                   title={raisonSuppression(l)}
-                  disabled={!!l.bran || l._count?.arrivages > 0}
+                  disabled={l._count?.arrivages > 0}
                   onClick={() => supprimerEnvoi(l)}
                 >
                   <Trash2 className="size-4" />

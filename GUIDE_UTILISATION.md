@@ -90,8 +90,8 @@ Les valeurs non confirmées apparaissent avec un badge **À valider**.
 3. Renseigner le client, la nature et le poids/détail des marchandises.
 4. Enregistrer.
 5. Depuis la ligne, cliquer sur l'**œil** pour voir le détail complet.
-6. Un envoi lié à un **BRAN** ou possédant des **arrivages** ne peut pas être
-   supprimé (un message explique la raison).
+6. Supprimer un envoi supprime aussi son **BRAN** ; la suppression est bloquée
+   uniquement si des **arrivages** y sont rattachés (un message l'explique).
 
 ---
 
@@ -173,5 +173,5 @@ Menu **Administration** :
 |---|---|
 | « API injoignable » | Vérifier que Docker tourne (`docker compose ps`) |
 | Renvoyé à la connexion | Jeton expiré — se reconnecter |
-| Bouton Supprimer inactif | Suppression interdite (lien BRAN/RFE ou arrivages) |
+| Bouton Supprimer inactif | Suppression interdite (arrivages liés, statut verrouillé…) |
 | Donnée « À valider » | Valeur du référentiel non encore confirmée |

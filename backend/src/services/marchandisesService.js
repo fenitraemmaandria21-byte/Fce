@@ -217,7 +217,8 @@ async function recuperer(id) {
   });
 }
 
-// DELETE /api/marchandises/:id — suppression (bloquée si arrivages ou BRAN liés).
+// DELETE /api/marchandises/:id — suppression (bloquée si arrivages liés).
+// Le BRAN éventuellement émis est supprimé en cascade avec l'envoi.
 async function supprimer(id, appelant) {
   return dbCall(async () => {
     const prisma = getPrisma();
@@ -233,25 +234,25 @@ async function supprimer(id, appelant) {
         `Suppression impossible : ${existant._count.arrivages} arrivage(s) lié(s) à cet envoi.`
       );
     }
-    if (existant.bran) {
-      throw new ApiError(
-        409,
-        'ENVOI_A_BRAN',
-        'Suppression impossible : un BRAN est déjà émis pour cet envoi.'
-      );
-    }
 
-    await prisma.envoi.delete({ where: { id } });
+    const branSupprime = Boolean(existant.bran);
+
+    await prisma.$transaction(async (tx) => {
+      if (existant.bran) {
+        await tx.bran.delete({ where: { id: existant.bran.id } });
+      }
+      await tx.envoi.delete({ where: { id } });
+    });
 
     await journaliser({
       utilisateurId: appelant.id,
       action: 'SUPPRESSION_ENVOI',
       entite: 'Envoi',
       entiteId: id,
-      details: { reference: existant.reference },
+      details: { reference: existant.reference, branSupprime },
     });
 
-    return { supprime: true };
+    return { supprime: true, branSupprime };
   });
 }
 
