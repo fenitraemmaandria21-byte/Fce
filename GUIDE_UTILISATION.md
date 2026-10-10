@@ -28,14 +28,18 @@ Ce guide explique, étape par étape, comment utiliser chaque partie de l'applic
 
 ## 2. Comprendre l'écran principal
 
-- **Barre latérale (gauche)** : navigation groupée en trois blocs — *Pilotage*,
-  *Exploitation*, *Administration*. Utiliser le bouton **☰** (en haut à gauche)
-  pour la replier/déplier : le logo s'adapte automatiquement.
-- **En-tête** : fil d'Ariane (emplacement) + rôle de l'utilisateur connecté.
+- **Barre latérale (gauche)** : navigation groupée en quatre blocs — *Pilotage*,
+  *Exploitation*, *Administration*, *Assistance*. Utiliser le bouton **☰** (en haut
+  à gauche) pour la replier/déplier : le logo s'adapte automatiquement.
+- **En-tête** : fil d'Ariane (emplacement) + bouton **?** (aide) + rôle de
+  l'utilisateur connecté.
 - **Menu utilisateur** (en bas de la barre latérale) : e-mail, rôle et
   **Se déconnecter**.
-- **Listes** : chaque page dispose d'un **filtre**, d'un bouton **Carte/Tableau**,
-  d'un bouton **Exporter** (CSV) et d'un bouton **Actualiser**.
+- **Listes** : chaque page dispose d'un **filtre**, d'un bouton **Carte/Tableau**
+  et d'un bouton **Actualiser**.
+
+> Un guide intégré est aussi disponible à tout moment via **Assistance ›
+> Comment utiliser ?** ou le bouton **?** de l'en-tête.
 
 ---
 
@@ -81,7 +85,7 @@ Les valeurs non confirmées apparaissent avec un badge **À valider**.
 
 ## 6. Envoyer des marchandises
 
-1. Ouvrir **Exploitation → Envois de marchandises**.
+1. Ouvrir **Exploitation → Marchandises**.
 2. Cliquer sur **Nouvel envoi**.
 3. Renseigner le client, la nature et le poids/détail des marchandises.
 4. Enregistrer.
@@ -119,16 +123,12 @@ Les valeurs non confirmées apparaissent avec un badge **À valider**.
 
 ---
 
-## 9. Documents et export
+## 9. Documents et impression
 
 - **BRAN** et **RFE** ne figurent plus dans le menu : on les génère depuis
-  **Envois de marchandises** (BRAN) et **Locations** (RFE), puis on les imprime.
+  **Marchandises** (BRAN) et **Locations** (RFE), puis on les imprime.
 - **Imprimer** un document : icône d'impression de la ligne ; seul le document
   est imprimé (mise en page dédiée).
-- **Exporter CSV** : bouton **Exporter** d'une liste. Le fichier reprend
-  **toutes les lignes filtrées** (pas seulement la page), s'ouvre correctement
-  dans Excel (accents, séparateur `;`) et porte un nom horodaté
-  (ex. `billets-20261010-2325.csv`).
 
 ---
 

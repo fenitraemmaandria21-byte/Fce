@@ -6,6 +6,7 @@ import AppLayout from '@/components/layout/AppLayout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { AuthProvider } from '@/context/AuthContext'
 import Dashboard from '@/pages/Dashboard'
+import Aide from '@/pages/Aide'
 import Gares from '@/pages/Gares'
 import Login from '@/pages/Login'
 import NotFound from '@/pages/NotFound'
@@ -40,6 +41,7 @@ export default function App() {
             }
           >
             <Route index element={<Dashboard />} />
+            <Route path="aide" element={<Aide />} />
             <Route path="gares" element={<Gares />} />
             <Route path="arrets" element={<Arrets />} />
             <Route path="tarifs" element={<Tarifs />} />

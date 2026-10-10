@@ -1,8 +1,10 @@
 import { Fragment } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { LifeBuoy } from 'lucide-react'
 
 import AppSidebar from '@/components/layout/AppSidebar'
 import { BadgeRole } from '@/lib/affichage'
+import { Button } from '@/components/ui/button'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,7 +28,7 @@ const LIBELLES_PAGES = {
   '/voitures': 'Voitures',
   '/wagons': 'Wagons',
   '/billets': 'Billets',
-  '/marchandises': 'Envois de marchandises',
+  '/marchandises': 'Marchandises',
   '/arrivages': 'Arrivages',
   '/locations': 'Locations',
   '/bran': 'BRAN',
@@ -34,6 +36,7 @@ const LIBELLES_PAGES = {
   '/utilisateurs': 'Utilisateurs',
   '/clients': 'Clients',
   '/parametres': 'Paramètres',
+  '/aide': 'Comment utiliser ?',
 }
 
 function FilAriane() {
@@ -80,6 +83,11 @@ export default function AppLayout() {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <FilAriane />
             <div className="ml-auto flex items-center gap-2">
+              <Button asChild variant="ghost" size="icon" title="Comment utiliser ?">
+                <Link to="/aide" aria-label="Comment utiliser l’application">
+                  <LifeBuoy />
+                </Link>
+              </Button>
               <BadgeRole role={utilisateur?.role} />
             </div>
           </header>

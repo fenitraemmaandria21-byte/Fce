@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   Package,
   PackageCheck,
@@ -61,6 +62,10 @@ const MENU = [
       { titre: 'Clients', url: '/clients', icon: User },
       { titre: 'Paramètres', url: '/parametres', icon: Settings, roles: ['SUPERADMIN'] },
     ],
+  },
+  {
+    label: 'Assistance',
+    items: [{ titre: 'Comment utiliser ?', url: '/aide', icon: LifeBuoy }],
   },
 ]
 
