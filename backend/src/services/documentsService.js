@@ -125,7 +125,12 @@ async function recupererBran(id) {
       where: { id },
       include: {
         lignes: true,
-        envoi: { include: { gareDestination: { select: { code: true } } } },
+        envoi: {
+          include: {
+            gareOrigine: { select: { code: true } },
+            gareDestination: { select: { code: true } },
+          },
+        },
         creePar: { select: { nom: true } },
       },
     });

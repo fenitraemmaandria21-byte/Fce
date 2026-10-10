@@ -1,8 +1,9 @@
-import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { Eye, Pencil, Plus, Printer, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
 import { z } from 'zod'
 
+import BranDocument from '@/components/BranDocument'
 import DialogueFormulaire from '@/components/DialogueFormulaire'
 import PageTable from '@/components/PageTable'
 import { Badge } from '@/components/ui/badge'
@@ -86,6 +87,13 @@ export default function Marchandises() {
   const { utilisateur } = useAuth()
   const peutSupprimer = utilisateur && ['SUPERADMIN', 'ADMIN'].includes(utilisateur.role)
 
+  const raisonSuppression = (l) => {
+    if (l.bran) return 'Suppression impossible : un BRAN est émis pour cet envoi.'
+    if (l._count?.arrivages > 0)
+      return `Suppression impossible : ${l._count.arrivages} arrivage(s) lié(s) à cet envoi.`
+    return 'Supprimer l’envoi'
+  }
+
   const [statut, setStatut] = useState('tous')
   const [gareFiltre, setGareFiltre] = useState('toutes')
   const [creationOuverte, setCreationOuverte] = useState(false)
@@ -98,7 +106,22 @@ export default function Marchandises() {
   const [detailComplet, setDetailComplet] = useState(null)
   const [detailChargement, setDetailChargement] = useState(false)
   const [detailErreur, setDetailErreur] = useState(null)
+  const [branDialogOuvert, setBranDialogOuvert] = useState(false)
+  const [branEnvoi, setBranEnvoi] = useState(null)
+  const [branLignes, setBranLignes] = useState([])
+  const [branErreur, setBranErreur] = useState(null)
+  const [branEnCours, setBranEnCours] = useState(false)
+  const [branAImprimer, setBranAImprimer] = useState(null)
   const rechargerRef = useRef(null)
+
+  useEffect(() => {
+    if (!branAImprimer) return undefined
+    const minuteur = setTimeout(() => {
+      window.print()
+      setBranAImprimer(null)
+    }, 150)
+    return () => clearTimeout(minuteur)
+  }, [branAImprimer])
 
   const gares = useApi('/gares', { limit: 100 })
   const gareListe = gares.donnees?.donnees || []
@@ -241,6 +264,70 @@ export default function Marchandises() {
     }
   }
 
+  const imprimerBran = async (id) => {
+    try {
+      const { data } = await api.get(`/bran/${id}`)
+      setBranAImprimer(data)
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Impression impossible'))
+    }
+  }
+
+  const gererBran = async (l) => {
+    if (l.bran) {
+      imprimerBran(l.bran.id)
+      return
+    }
+    if (!peutSupprimer) {
+      toast.info('Aucun BRAN pour cet envoi — génération réservée aux administrateurs.')
+      return
+    }
+    try {
+      const { data } = await api.get(`/marchandises/${l.id}`)
+      setBranEnvoi(data)
+      setBranLignes(
+        (data.lignes || []).map((lg) => ({
+          designation: [lg.categorie, lg.designation].filter(Boolean).join(' — '),
+          montant: '',
+        }))
+      )
+      setBranErreur(null)
+      setBranDialogOuvert(true)
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Chargement de l’envoi impossible'))
+    }
+  }
+
+  const modifierBranLigne = (index, cle, valeur) => {
+    setBranLignes((lignes) =>
+      lignes.map((ligne, i) => (i === index ? { ...ligne, [cle]: valeur } : ligne))
+    )
+  }
+
+  const soumettreBran = async () => {
+    const lignes = branLignes.map((l) => ({
+      designation: (l.designation || '').trim() || null,
+      montant: Number(l.montant),
+    }))
+    if (lignes.length === 0 || lignes.some((l) => !Number.isFinite(l.montant) || l.montant <= 0)) {
+      setBranErreur('Chaque ligne doit avoir un montant supérieur à 0.')
+      return
+    }
+    setBranEnCours(true)
+    setBranErreur(null)
+    try {
+      const { data } = await api.post('/bran', { envoiId: branEnvoi.id, lignes })
+      toast.success('BRAN généré.')
+      setBranDialogOuvert(false)
+      rechargerRef.current?.()
+      imprimerBran(data.id)
+    } catch (erreur) {
+      setBranErreur(messageApi(erreur, 'Génération impossible'))
+    } finally {
+      setBranEnCours(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <PageTable
@@ -263,7 +350,7 @@ export default function Marchandises() {
               </>
             }
             titre={edition ? 'Modifier l’envoi' : 'Nouvel envoi'}
-            description="Le poids total et la référence seront complétés par le système."
+            description="Le poids total est calculé automatiquement à partir des lignes."
             messageErreur={erreurGlobale}
             enCours={enCours}
             onSoumettre={soumettre}
@@ -481,24 +568,52 @@ export default function Marchandises() {
           },
         ]}
         colonnes={[
-          { titre: 'Référence', rendre: (l) => <span className="font-medium">{l.reference || '—'}</span> },
-          { titre: 'Date', rendre: (l) => formatDate(l.dateEnvoi) },
-          { titre: 'Expéditeur', cle: 'expediteurNom' },
-          { titre: 'Destinataire', cle: 'destinataireNom' },
-          { titre: 'Colis', align: 'right', rendre: (l) => formatNombre(l.nombreColis) },
+          {
+            titre: 'Référence',
+            rendre: (l) => <span className="font-medium">{l.reference || '—'}</span>,
+          },
+          {
+            titre: 'Date',
+            rendre: (l) => formatDate(l.dateEnvoi),
+          },
+          { titre: 'Expéditeur', cle: 'expediteurNom', tronquer: true },
+          { titre: 'Destinataire', cle: 'destinataireNom', tronquer: true },
+          {
+            titre: 'Colis',
+            align: 'right',
+            rendre: (l) => formatNombre(l.nombreColis),
+          },
           {
             titre: 'Poids (kg)',
             align: 'right',
             rendre: (l) => (l.poidsTotal != null ? formatNombre(Number(l.poidsTotal)) : '—'),
           },
-          { titre: 'Lignes', align: 'right', rendre: (l) => formatNombre(l.nombreLignes) },
-          { titre: 'Dest.', rendre: (l) => (l.gareDestination?.code ? <Badge variant="outline">{l.gareDestination.code}</Badge> : '—') },
-          { titre: 'Statut', rendre: (l) => <BadgeStatut statut={l.statut} /> },
+          {
+            titre: 'Lignes',
+            align: 'right',
+            rendre: (l) => formatNombre(l.nombreLignes),
+          },
+          {
+            titre: 'Dest.',
+            rendre: (l) => (l.gareDestination?.code ? <Badge variant="outline">{l.gareDestination.code}</Badge> : '—'),
+          },
+          {
+            titre: 'Statut',
+            rendre: (l) => <BadgeStatut statut={l.statut} />,
+          },
         ]}
         rendreActions={(l) => (
           <div className="flex justify-end gap-1">
             <Button variant="ghost" size="sm" title="Détails" onClick={() => ouvrirDetail(l)}>
               <Eye />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              title={l.bran ? 'Imprimer le BRAN' : 'Générer le BRAN'}
+              onClick={() => gererBran(l)}
+            >
+              <Printer className="size-4" />
             </Button>
             {peutSupprimer && (
               <Button
@@ -511,16 +626,18 @@ export default function Marchandises() {
               </Button>
             )}
             {peutSupprimer && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive"
-                title="Supprimer l’envoi"
-                disabled={l._count?.arrivages > 0 || !!l.bran}
-                onClick={() => supprimerEnvoi(l)}
-              >
-                <Trash2 className="size-4" />
-              </Button>
+              <span title={raisonSuppression(l)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  title={raisonSuppression(l)}
+                  disabled={!!l.bran || l._count?.arrivages > 0}
+                  onClick={() => supprimerEnvoi(l)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </span>
             )}
           </div>
         )}
@@ -568,22 +685,24 @@ export default function Marchandises() {
           if (!ouverture) setDetail(null)
         }}
       >
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>Envoi {detail?.reference || ''}</SheetTitle>
             <SheetDescription>Détail complet de l’envoi et de son suivi.</SheetDescription>
           </SheetHeader>
 
-          {detailErreur && <p className="text-sm font-medium text-destructive">{detailErreur}</p>}
+          {detailErreur && (
+            <p className="px-4 text-sm font-medium text-destructive">{detailErreur}</p>
+          )}
 
           {detailChargement ? (
-            <div className="space-y-3 py-4">
+            <div className="space-y-3 px-4 py-4">
               {[0, 1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-4 w-full" />
               ))}
             </div>
           ) : detailComplet ? (
-            <div className="space-y-6 py-4 text-sm">
+            <div className="space-y-5 px-4 pb-6 pt-2 text-sm">
               <div className="space-y-1">
                 <p className="text-muted-foreground">Expéditeur</p>
                 <p className="font-medium">
@@ -629,6 +748,24 @@ export default function Marchandises() {
               <div className="flex items-center gap-2">
                 <BadgeStatut statut={detailComplet.statut} />
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-md border p-3">
+                  <p className="text-muted-foreground">Référence</p>
+                  <p className="font-medium">{detailComplet.reference || '—'}</p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-muted-foreground">Facture</p>
+                  <p className="font-medium">{detailComplet.factureNumero || '—'}</p>
+                </div>
+              </div>
+
+              {detailComplet.observations && (
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">Observations</p>
+                  <p>{detailComplet.observations}</p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <p className="font-medium">Lignes</p>
@@ -684,6 +821,49 @@ export default function Marchandises() {
           ) : null}
         </SheetContent>
       </Sheet>
+
+      <DialogueFormulaire
+        ouvert={branDialogOuvert}
+        onFermer={() => setBranDialogOuvert(false)}
+        titre="Générer le BRAN"
+        description={`Envoi ${branEnvoi?.reference || ''} — saisir le montant de chaque ligne. Le BRAN sera imprimé automatiquement.`}
+        messageErreur={branErreur}
+        enCours={branEnCours}
+        onSoumettre={soumettreBran}
+        libelleValider="Générer et imprimer"
+        large
+      >
+        <div className="space-y-3">
+          {branLignes.map((ligne, index) => (
+            <div key={index} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_10rem]">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Désignation</Label>
+                <Input
+                  value={ligne.designation}
+                  onChange={(e) => modifierBranLigne(index, 'designation', e.target.value)}
+                  placeholder="Désignation"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Montant (Ar)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={ligne.montant}
+                  onChange={(e) => modifierBranLigne(index, 'montant', e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </DialogueFormulaire>
+
+      {branAImprimer && (
+        <div className="zone-impression fixed left-[-10000px] top-0">
+          <BranDocument bran={branAImprimer} />
+        </div>
+      )}
     </div>
   )
 }

@@ -122,8 +122,8 @@ export default function Utilisateurs() {
   }
 
   const colonnes = [
-    { titre: 'Nom', rendre: (u) => <span className="font-medium">{u.nom}</span> },
-    { titre: 'E-mail', rendre: (u) => <span className="text-muted-foreground">{u.email}</span> },
+    { titre: 'Nom', tronquer: true, titreInfo: (u) => u.nom, rendre: (u) => <span className="font-medium">{u.nom}</span> },
+    { titre: 'E-mail', tronquer: true, largeur: 'max-w-[18rem]', titreInfo: (u) => u.email, rendre: (u) => <span className="text-muted-foreground">{u.email}</span> },
     { titre: 'Rôle', rendre: (u) => <BadgeRole role={u.role} /> },
     {
       titre: 'Statut',

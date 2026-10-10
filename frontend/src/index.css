@@ -21,7 +21,12 @@ body,
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply text-slate-900 antialiased;
+  background:
+    radial-gradient(1200px 600px at 100% -10%, var(--color-fce-50), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, oklch(0.97 0.03 250 / 0.6), transparent 55%),
+    #f8fafc;
+  background-attachment: fixed;
 }
 
 @theme inline {
@@ -151,5 +156,135 @@ body {
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* Animations & transitions globales (cohérence + douceur) */
+@keyframes fce-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fce-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  .animate-fade-up {
+    animation: fce-fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-fade-in {
+    animation: fce-fade-in 0.4s ease-out both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in {
+    animation: none;
+  }
+}
+
+/* Toasts react-toastify — harmonisation avec la charte FCE */
+.Toastify__toast {
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+}
+
+.Toastify__toast--success {
+  background: var(--color-fce-600);
+}
+
+/* SweetAlert2 — harmonisation avec la charte FCE (souris/cartes shadcn) */
+.swal2-container .swal2-popup {
+  font-family: var(--font-sans);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--card-foreground);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.12);
+  padding: 1.5rem;
+}
+
+.swal2-container .swal2-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.swal2-container .swal2-html-container {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.swal2-container .swal2-styled {
+  border-radius: calc(var(--radius) * 0.8);
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  box-shadow: none;
+}
+
+.swal2-container .swal2-styled:focus,
+.swal2-container .swal2-styled:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 30%, transparent);
+}
+
+.swal2-container .swal2-actions {
+  gap: 0.5rem;
+}
+
+.swal2-container .swal2-input,
+.swal2-container .swal2-textarea {
+  border-radius: calc(var(--radius) * 0.8);
+  border: 1px solid var(--input);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  box-shadow: none;
+}
+
+.swal2-container .swal2-input:focus,
+.swal2-container .swal2-textarea:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 30%, transparent);
+}
+
+.swal2-container .swal2-input-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+  justify-content: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+/* Impression des documents (ticket, BRAN) : seul le document est imprimé */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .zone-impression,
+  .zone-impression * {
+    visibility: visible !important;
+  }
+  .zone-impression {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+  }
+  @page {
+    margin: 14mm;
   }
 }

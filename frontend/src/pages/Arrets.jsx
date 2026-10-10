@@ -89,7 +89,7 @@ export default function Arrets() {
 
   const colonnes = [
     { titre: 'PK', align: 'right', rendre: (l) => <span className="tabular-nums">{l.pk}</span> },
-    { titre: 'Libellé', cle: 'libelle' },
+    { titre: 'Libellé', cle: 'libelle', tronquer: true },
     {
       titre: 'Zone géographique',
       rendre: (l) => <Marqueur valeur={l.zoneGeographique} />,

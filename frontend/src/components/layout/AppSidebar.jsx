@@ -1,6 +1,4 @@
 import {
-  FileCheck2,
-  FileText,
   LayoutDashboard,
   LogOut,
   Package,
@@ -46,16 +44,9 @@ const MENU = [
     label: 'Exploitation',
     items: [
       { titre: 'Billets', url: '/billets', icon: Ticket },
-      { titre: 'Envois de marchandises', url: '/marchandises', icon: Package },
+      { titre: 'Marchandises', url: '/marchandises', icon: Package },
       { titre: 'Arrivages', url: '/arrivages', icon: PackageCheck },
       { titre: 'Locations', url: '/locations', icon: Truck },
-    ],
-  },
-  {
-    label: 'Documents',
-    items: [
-      { titre: 'BRAN', url: '/bran', icon: FileText },
-      { titre: 'RFE', url: '/rfe', icon: FileCheck2 },
     ],
   },
   {
@@ -86,12 +77,13 @@ export default function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-1 py-1">
-          <span className="grid size-8 shrink-0 place-items-center rounded-md bg-fce-600 text-sm font-bold text-white">
-            F
-          </span>
-          <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
-            FCE-SI
+        <div className="flex items-center justify-center">
+          <span className="group/logo grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-white p-1 shadow-sm ring-1 ring-sidebar-border transition-[width,height,padding,border-radius] duration-300 ease-out group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:rounded-md group-data-[collapsible=icon]:p-1">
+            <img
+              src="/logo.jpg"
+              alt="Logo FCE"
+              className="h-full w-full object-contain transition-transform duration-300 ease-out group-data-[collapsible=icon]:scale-90 group-hover/logo:scale-105"
+            />
           </span>
         </div>
       </SidebarHeader>

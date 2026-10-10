@@ -1,8 +1,9 @@
-import { Pencil, Plus, Trash2 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { Pencil, Plus, Printer, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
 import { z } from 'zod'
 
+import BranDocument from '@/components/BranDocument'
 import DialogueFormulaire from '@/components/DialogueFormulaire'
 import PageTable from '@/components/PageTable'
 import { Badge } from '@/components/ui/badge'
@@ -53,7 +54,17 @@ export default function Arrivages() {
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
   const [edition, setEdition] = useState(null)
+  const [branAImprimer, setBranAImprimer] = useState(null)
   const rechargerRef = useRef(null)
+
+  useEffect(() => {
+    if (!branAImprimer) return undefined
+    const minuteur = setTimeout(() => {
+      window.print()
+      setBranAImprimer(null)
+    }, 150)
+    return () => clearTimeout(minuteur)
+  }, [branAImprimer])
 
   const envois = useApi('/marchandises', { limit: 100 })
   const trains = useApi('/trains')
@@ -146,6 +157,23 @@ export default function Arrivages() {
       toast.error(messageApi(erreur, 'Suppression impossible'))
     } finally {
       setEnCours(false)
+    }
+  }
+
+  const imprimerBran = async (id) => {
+    try {
+      const { data } = await api.get(`/bran/${id}`)
+      setBranAImprimer(data)
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Impression impossible'))
+    }
+  }
+
+  const gererBran = (l) => {
+    if (l.envoi?.bran) {
+      imprimerBran(l.envoi.bran.id)
+    } else {
+      toast.info('Aucun BRAN pour cet envoi — à générer depuis les marchandises.')
     }
   }
 
@@ -290,15 +318,43 @@ export default function Arrivages() {
         },
       ]}
       colonnes={[
-        { titre: 'Date', rendre: (l) => formatDate(l.dateArrivage) },
-        { titre: 'Envoi', rendre: (l) => <span className="font-medium">{l.envoi?.reference || '—'}</span> },
-        { titre: 'Destinataire', rendre: (l) => l.envoi?.destinataireNom || '—' },
-        { titre: 'Train', rendre: (l) => (l.train?.numero ? <Badge variant="outline">{l.train.numero}</Badge> : '—') },
-        { titre: 'Gare', rendre: (l) => (l.gare?.code ? <Badge variant="outline">{l.gare.code}</Badge> : '—') },
-        { titre: 'Statut', rendre: (l) => <BadgeStatut statut={l.statut} /> },
+        {
+          titre: 'Date',
+          rendre: (l) => formatDate(l.dateArrivage),
+        },
+        {
+          titre: 'Envoi',
+          rendre: (l) => <span className="font-medium">{l.envoi?.reference || '—'}</span>,
+        },
+        {
+          titre: 'Destinataire',
+          tronquer: true,
+          titreInfo: (l) => l.envoi?.destinataireNom,
+          rendre: (l) => l.envoi?.destinataireNom || '—',
+        },
+        {
+          titre: 'Train',
+          rendre: (l) => (l.train?.numero ? <Badge variant="outline">{l.train.numero}</Badge> : '—'),
+        },
+        {
+          titre: 'Gare',
+          rendre: (l) => (l.gare?.code ? <Badge variant="outline">{l.gare.code}</Badge> : '—'),
+        },
+        {
+          titre: 'Statut',
+          rendre: (l) => <BadgeStatut statut={l.statut} />,
+        },
       ]}
       rendreActions={(l) => (
         <div className="flex justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            title={l.envoi?.bran ? 'Imprimer le BRAN' : 'Aucun BRAN pour cet envoi'}
+            onClick={() => gererBran(l)}
+          >
+            <Printer className="size-4" />
+          </Button>
           {peutGerer && (
             <Button
               variant="ghost"
@@ -356,6 +412,11 @@ export default function Arrivages() {
         </div>
       )}
     />
+    {branAImprimer && (
+      <div className="zone-impression fixed left-[-10000px] top-0">
+        <BranDocument bran={branAImprimer} />
+      </div>
+    )}
     </div>
   )
 }

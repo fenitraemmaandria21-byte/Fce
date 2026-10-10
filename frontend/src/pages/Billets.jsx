@@ -1,10 +1,11 @@
-import { Pencil, Plus, Trash2 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { Pencil, Plus, Printer, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import DialogueFormulaire from '@/components/DialogueFormulaire'
 import PageTable from '@/components/PageTable'
+import TicketBillet from '@/components/TicketBillet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -88,7 +89,17 @@ export default function Billets() {
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
   const [edition, setEdition] = useState(null)
+  const [aImprimer, setAImprimer] = useState(null)
   const rechargerRef = useRef(null)
+
+  useEffect(() => {
+    if (!aImprimer) return undefined
+    const minuteur = setTimeout(() => {
+      window.print()
+      setAImprimer(null)
+    }, 150)
+    return () => clearTimeout(minuteur)
+  }, [aImprimer])
 
   const gares = useApi('/gares', { limit: 100 })
   const trains = useApi('/trains')
@@ -157,10 +168,11 @@ export default function Billets() {
       }
       if (edition) {
         await api.put(`/billets/${edition.id}`, corps)
+        toast.success('Billet modifié.')
       } else {
         await api.post('/billets', corps)
+        toast.success('Billet vendu.')
       }
-      toast.success(edition ? 'Billet modifié.' : 'Billet vendu.')
       setEdition(null)
       setVenteOuverte(false)
       rechargerRef.current?.()
@@ -168,6 +180,15 @@ export default function Billets() {
       setErreurGlobale(messageApi(erreur, 'Vente impossible'))
     } finally {
       setEnCours(false)
+    }
+  }
+
+  const imprimer = async (l) => {
+    try {
+      const { data } = await api.get(`/billets/${l.id}`)
+      setAImprimer(data)
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Impression impossible'))
     }
   }
 
@@ -428,6 +449,8 @@ export default function Billets() {
           },
           {
             titre: 'Voyageur',
+            tronquer: true,
+            titreInfo: (l) => [l.voyageurNom, l.voyageurIdentite].filter(Boolean).join(' '),
             rendre: (l) => (
               <span>
                 {l.voyageurNom}{' '}
@@ -444,17 +467,34 @@ export default function Billets() {
               </span>
             ),
           },
-          { titre: 'Classe', rendre: (l) => LIBELLES_CLASSE[l.classe] || l.classe },
+          {
+            titre: 'Classe',
+            rendre: (l) => LIBELLES_CLASSE[l.classe] || l.classe,
+          },
           {
             titre: 'Tarif',
             align: 'right',
             rendre: (l) => <span className="tabular-nums">{facturetarif(l)}</span>,
           },
-          { titre: 'Date voyage', rendre: (l) => formatDate(l.dateVoyage) },
-          { titre: 'Statut', rendre: (l) => <BadgeStatut statut={l.statut} /> },
+          {
+            titre: 'Date voyage',
+            rendre: (l) => formatDate(l.dateVoyage),
+          },
+          {
+            titre: 'Statut',
+            rendre: (l) => <BadgeStatut statut={l.statut} />,
+          },
         ]}
         rendreActions={(l) => (
           <div className="flex justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Imprimer le ticket"
+              onClick={() => imprimer(l)}
+            >
+              <Printer className="size-4" />
+            </Button>
             {peutAnnuler && l.statut === 'VENDU' && (
               <Button
                 variant="ghost"
@@ -526,6 +566,11 @@ export default function Billets() {
           </div>
         )}
       />
+      {aImprimer && (
+        <div id="ticket-impression" className="zone-impression fixed left-[-10000px] top-0">
+          <TicketBillet billet={aImprimer} />
+        </div>
+      )}
     </div>
   )
 }

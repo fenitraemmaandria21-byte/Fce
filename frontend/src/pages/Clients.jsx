@@ -45,9 +45,9 @@ export default function Clients() {
           )
         }
         colonnes={[
-          { titre: 'Nom', cle: 'nom' },
-          { titre: 'Contact', cle: 'contact' },
-          { titre: 'Adresse', cle: 'adresse' },
+          { titre: 'Nom', cle: 'nom', tronquer: true },
+          { titre: 'Contact', cle: 'contact', tronquer: true },
+          { titre: 'Adresse', cle: 'adresse', tronquer: true },
           {
             titre: 'Locations',
             align: 'right',

@@ -12,11 +12,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:validate": "prisma validate",
-    "prisma:seed": "node prisma/seed.js",
     "check:security": "node scripts/check-security.js"
-  },
-  "prisma": {
-    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "^6.13.0",

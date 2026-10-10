@@ -87,7 +87,18 @@ export default function App() {
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
-        <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          limit={4}
+          newestOnTop
+          closeOnClick
+          pauseOnHover
+          pauseOnFocusLoss={false}
+          draggable
+          progressClassName="!bg-fce-600"
+          theme="colored"
+        />
       </AuthProvider>
     </BrowserRouter>
   )

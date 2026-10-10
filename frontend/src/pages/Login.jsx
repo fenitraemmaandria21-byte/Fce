@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { Loader2, TrainFront, ShieldCheck, BarChart3, FileText } from 'lucide-react'
+import { Loader2, ShieldCheck, BarChart3, FileText } from 'lucide-react'
 import { z } from 'zod'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -63,15 +63,13 @@ export default function Login() {
   return (
     <div className="flex min-h-screen">
       <aside className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-slate-900 p-10 text-slate-100 lg:flex">
+        <img
+          src="/train.jpg"
+          alt="Train FCE"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-900/60 to-slate-950/85" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,197,94,0.25),transparent_60%)]" />
-        <div className="relative flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-xl bg-fce-600 text-white shadow-lg shadow-fce-600/30">
-            <TrainFront className="size-6" />
-          </span>
-          <span className="text-xl font-bold tracking-tight">
-            FCE-SI
-          </span>
-        </div>
 
         <div className="relative space-y-6">
           <h1 className="text-3xl font-bold leading-tight">
@@ -97,7 +95,7 @@ export default function Login() {
           </ul>
         </div>
 
-        <p className="relative text-xs text-slate-500">
+        <p className="relative text-xs text-slate-300">
           © {ANNEE_COURANTE} Fitadia – Compagnie Ferroviaire Express (FCE)
         </p>
       </aside>
@@ -105,13 +103,13 @@ export default function Login() {
       <main className="flex flex-1 items-center justify-center bg-slate-50 p-4">
         <Card className="w-full max-w-md border-slate-200 shadow-sm">
           <CardHeader className="space-y-3">
-            <span className="grid size-12 place-items-center rounded-xl bg-fce-600 text-lg font-bold text-white lg:hidden">
-              <TrainFront className="size-6" />
+            <span className="grid h-16 place-items-center overflow-hidden rounded-xl bg-white p-1 ring-1 ring-slate-200 lg:hidden">
+              <img src="/logo.jpg" alt="Logo FCE" className="h-full w-auto object-contain" />
             </span>
             <div>
               <CardTitle className="text-2xl">Connexion</CardTitle>
               <CardDescription>
-                Accédez à la plateforme FCE-SI avec votre compte.
+                Accédez à la plateforme avec votre compte.
               </CardDescription>
             </div>
           </CardHeader>
@@ -159,9 +157,9 @@ export default function Login() {
             </Button>
 
             <p className="text-xs text-muted-foreground">
-              Le compte initial est créé par le seed (variables SEED_SUPERADMIN_EMAIL et
-              SEED_SUPERADMIN_MOTDEPASSE). Toute tentative échoue tant que la base de
-              données n’est pas disponible.
+              Les comptes d’accès sont créés et gérés par l’administrateur de la
+              plateforme. Toute tentative échoue tant que la base de données n’est
+              pas disponible.
             </p>
           </form>
         </CardContent>

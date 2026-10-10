@@ -255,7 +255,7 @@ export default function Dashboard() {
         <AlertDescription>
           {messageApi(etat.erreur, 'Impossible de charger le tableau de bord.')}{' '}
           Vérifiez que PostgreSQL est démarré (docker compose up -d) puis
-          appliquez les migrations et le seed.
+          appliquez les migrations.
         </AlertDescription>
       </Alert>
     )

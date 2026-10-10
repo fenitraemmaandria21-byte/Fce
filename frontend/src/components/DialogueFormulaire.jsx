@@ -39,7 +39,9 @@ export default function DialogueFormulaire({
           <Button onClick={onOuvrir}>{libelleOuvrir}</Button>
         </DialogTrigger>
       )}
-      <DialogContent className={large ? 'max-w-3xl' : 'sm:max-w-lg'}>
+      <DialogContent
+        className={`max-h-[90vh] overflow-y-auto ${large ? 'sm:max-w-4xl' : 'sm:max-w-2xl'}`}
+      >
         <DialogHeader>
           <DialogTitle>{titre}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

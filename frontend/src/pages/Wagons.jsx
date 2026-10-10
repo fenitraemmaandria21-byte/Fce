@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useApi } from '@/hooks/useApi'
+import { formatNombre } from '@/lib/affichage'
 import { confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 
@@ -134,7 +135,7 @@ export default function Wagons() {
               { titre: 'Code', cle: 'code' },
               { titre: 'Type', rendre: (l) => <Badge variant="outline">{l.typeWagon}</Badge> },
               { titre: 'Série', align: 'right', cle: 'serie' },
-              { titre: 'Capacité', align: 'right', rendre: (l) => `${l.capaciteTonnes} t` },
+              { titre: 'Capacité', align: 'right', rendre: (l) => `${formatNombre(l.capaciteTonnes)} t` },
             ]}
             chargement={chargement}
             lignes={lignes}

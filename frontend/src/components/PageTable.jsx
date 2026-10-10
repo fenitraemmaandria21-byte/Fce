@@ -93,13 +93,15 @@ export default function PageTable({
             <p className="text-sm text-muted-foreground">{description}</p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {actions}
-          <Button variant="outline" size="sm" onClick={recharger} disabled={chargement}>
-            <RefreshCw className={chargement ? 'animate-spin' : undefined} />
-            Actualiser
-          </Button>
-        </div>
+        {!rendreCarte && (
+          <div className="flex flex-wrap items-center gap-2">
+            {actions}
+            <Button variant="outline" size="sm" onClick={recharger} disabled={chargement}>
+              <RefreshCw className={chargement ? 'animate-spin' : undefined} />
+              Actualiser
+            </Button>
+          </div>
+        )}
       </div>
 
       {(recherche || filtres.length > 0 || rendreCarte) && (
@@ -137,27 +139,30 @@ export default function PageTable({
             </Select>
           ))}
           {rendreCarte && (
-            <div
-              className="ml-auto flex items-center gap-1 rounded-md border border-foreground/20 p-1"
-              role="group"
-              aria-label="Mode d'affichage"
-            >
-              <Button
-                variant={vue === 'carte' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setVue('carte')}
+            <div className="ml-auto flex items-center gap-2">
+              {actions}
+              <div
+                className="flex items-center gap-1 rounded-md border border-foreground/20 p-1"
+                role="group"
+                aria-label="Mode d'affichage"
               >
-                <LayoutGrid className="size-4" />
-                Carte
-              </Button>
-              <Button
-                variant={vue === 'tableau' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setVue('tableau')}
-              >
-                <List className="size-4" />
-                Tableau
-              </Button>
+                <Button
+                  variant={vue === 'carte' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setVue('carte')}
+                >
+                  <LayoutGrid className="size-4" />
+                  Carte
+                </Button>
+                <Button
+                  variant={vue === 'tableau' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setVue('tableau')}
+                >
+                  <List className="size-4" />
+                  Tableau
+                </Button>
+              </div>
             </div>
           )}
         </div>

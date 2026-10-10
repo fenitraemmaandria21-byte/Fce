@@ -1,10 +1,11 @@
-import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { Check, Pencil, Plus, ReceiptText, Trash2, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import DialogueFormulaire from '@/components/DialogueFormulaire'
 import PageTable from '@/components/PageTable'
+import RfeDocument from '@/components/RfeDocument'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,14 +19,18 @@ import {
 } from '@/components/ui/select'
 import { useAuth } from '@/context/AuthContext'
 import { useApi } from '@/hooks/useApi'
-import { confirmerSuppression, demanderMotif } from '@/lib/confirmation'
+import { confirmerAction, confirmerSuppression, demanderMotif } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
 import {
+  BadgeAValider,
+  BadgeEcheance,
   BadgeStatut,
   LIBELLES_FORMULE,
   LIBELLES_TYPE_LOCATION,
   formatArgent,
   formatDate,
+  formatDuree,
+  formatNombre,
 } from '@/lib/affichage'
 
 const TYPES = [
@@ -99,7 +104,17 @@ export default function Locations() {
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
   const [edition, setEdition] = useState(null)
+  const [rfeAImprimer, setRfeAImprimer] = useState(null)
   const rechargerRef = useRef(null)
+
+  useEffect(() => {
+    if (!rfeAImprimer) return undefined
+    const minuteur = setTimeout(() => {
+      window.print()
+      setRfeAImprimer(null)
+    }, 150)
+    return () => clearTimeout(minuteur)
+  }, [rfeAImprimer])
 
   const zones = useApi('/zones')
   const zoneListe = zones.donnees?.donnees || []
@@ -235,14 +250,70 @@ export default function Locations() {
   }
 
   const supprimer = async (l) => {
-    if (!(await confirmerSuppression(`Supprimer la location de ${l.client?.nom || 'ce client'} ?`))) return
+    const avertissementRfe = l.rfe
+      ? ' Le RFE (facture + reçu) associé sera également supprimé.'
+      : ''
+    if (
+      !(await confirmerSuppression(
+        `Supprimer la location de ${l.client?.nom || 'ce client'} ?${avertissementRfe}`
+      ))
+    )
+      return
     setEnCours(true)
     try {
-      await api.delete(`/locations/${l.id}`)
-      toast.success('Location supprimée.')
+      const { data } = await api.delete(`/locations/${l.id}`)
+      toast.success(
+        data?.rfeSupprime ? 'Location et son RFE supprimés.' : 'Location supprimée.'
+      )
       rechargerRef.current?.()
     } catch (erreur) {
       toast.error(messageApi(erreur, 'Suppression impossible'))
+    } finally {
+      setEnCours(false)
+    }
+  }
+
+  const imprimerRfe = async (id) => {
+    try {
+      const { data } = await api.get(`/rfe/${id}`)
+      setRfeAImprimer(data)
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Impression impossible'))
+    }
+  }
+
+  const gererRfe = async (l) => {
+    if (l.rfe) {
+      imprimerRfe(l.rfe.id)
+      return
+    }
+    if (!peutValider) {
+      toast.info('Aucun RFE pour cette location — génération réservée aux administrateurs.')
+      return
+    }
+    if (l.statut !== 'VALIDEE') {
+      toast.info('Validez d’abord la location pour générer son RFE.')
+      return
+    }
+    if (l.montant == null) {
+      toast.info('Montant non configuré — RFE impossible.')
+      return
+    }
+    const confirme = await confirmerAction({
+      titre: 'Générer le RFE',
+      texte: `Client ${l.client?.nom || ''} — ${formatArgent(l.montant)}. Un RFE (facture + reçu) sera émis puis imprimé.`,
+      libelleConfirmer: 'Générer et imprimer',
+      icone: 'question',
+    })
+    if (!confirme) return
+    setEnCours(true)
+    try {
+      const { data } = await api.post('/rfe', { locationId: l.id })
+      toast.success('RFE généré.')
+      rechargerRef.current?.()
+      imprimerRfe(data.id)
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Génération impossible'))
     } finally {
       setEnCours(false)
     }
@@ -361,6 +432,27 @@ export default function Locations() {
                   <p className="text-sm text-destructive">{erreurs.dateDebut}</p>
                 )}
               </div>
+              <div className="space-y-2">
+                <Label>
+                  Date et heure de fin
+                  {formulaire.type !== 'MACHINE' && (
+                    <span className="ml-1 font-normal text-muted-foreground">(optionnel)</span>
+                  )}
+                </Label>
+                <Input
+                  type="datetime-local"
+                  value={formulaire.dateFin}
+                  onChange={(e) => modifierChamp('dateFin', e.target.value)}
+                />
+                {formulaire.dateDebut && formulaire.dateFin && !erreurs.dateFin && (
+                  <p className="text-xs text-muted-foreground">
+                    Durée : {formatDuree(formulaire.dateDebut, formulaire.dateFin) || '—'}
+                  </p>
+                )}
+                {erreurs.dateFin && (
+                  <p className="text-sm text-destructive">{erreurs.dateFin}</p>
+                )}
+              </div>
 
               {formulaire.type === 'DRAISINE' && (
                 <>
@@ -439,17 +531,6 @@ export default function Locations() {
                       <p className="text-sm text-destructive">{erreurs.formule}</p>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <Label>Date et heure de retour</Label>
-                    <Input
-                      type="datetime-local"
-                      value={formulaire.dateFin}
-                      onChange={(e) => modifierChamp('dateFin', e.target.value)}
-                    />
-                    {erreurs.dateFin && (
-                      <p className="text-sm text-destructive">{erreurs.dateFin}</p>
-                    )}
-                  </div>
                 </>
               )}
 
@@ -491,6 +572,12 @@ export default function Locations() {
         colonnes={[
           {
             titre: 'Client',
+            tronquer: true,
+            largeur: 'max-w-[18rem]',
+            titreInfo: (l) =>
+              [l.client?.nom, l.client?.contact, l.client?.adresse]
+                .filter(Boolean)
+                .join(' — '),
             rendre: (l) => (
               <span>
                 {l.client?.nom}{' '}
@@ -503,10 +590,22 @@ export default function Locations() {
               </span>
             ),
           },
-          { titre: 'Type', rendre: (l) => LIBELLES_TYPE_LOCATION[l.type] || l.type },
-          { titre: 'Zone', rendre: (l) => (l.zone?.code ? <Badge variant="outline">{l.zone.code}</Badge> : '—') },
+          {
+            titre: 'Type',
+            rendre: (l) => LIBELLES_TYPE_LOCATION[l.type] || l.type,
+          },
+          {
+            titre: 'Zone',
+            rendre: (l) => (l.zone?.code ? <Badge variant="outline">{l.zone.code}</Badge> : '—'),
+          },
           {
             titre: 'Formule',
+            tronquer: true,
+            largeur: 'max-w-[14rem]',
+            titreInfo: (l) =>
+              l.depart
+                ? `${l.depart}${l.formule || l.allerRetour ? ` — ${afficherFormule(l)}` : ''}`
+                : afficherFormule(l),
             rendre: (l) =>
               l.depart ? (
                 <span>
@@ -517,8 +616,36 @@ export default function Locations() {
                 afficherFormule(l)
               ),
           },
-          { titre: 'Personnes', align: 'right', rendre: (l) => `${l.personnes}` },
-          { titre: 'Début', rendre: (l) => formatDate(l.dateDebut, true) },
+          {
+            titre: 'Personnes',
+            align: 'right',
+            rendre: (l) => formatNombre(l.personnes),
+          },
+          {
+            titre: 'Début',
+            rendre: (l) => formatDate(l.dateDebut, true),
+          },
+          {
+            titre: 'Fin',
+            titreInfo: (l) => formatDuree(l.dateDebut, l.dateFin),
+            rendre: (l) =>
+              l.dateFin ? (
+                <span className="whitespace-nowrap">
+                  {formatDate(l.dateFin, true)}
+                  {formatDuree(l.dateDebut, l.dateFin) && (
+                    <span className="block text-xs text-muted-foreground">
+                      {formatDuree(l.dateDebut, l.dateFin)}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Non définie</span>
+              ),
+          },
+          {
+            titre: 'Échéance',
+            rendre: (l) => <BadgeEcheance debut={l.dateDebut} fin={l.dateFin} statut={l.statut} />,
+          },
           {
             titre: 'Montant',
             align: 'right',
@@ -526,15 +653,26 @@ export default function Locations() {
               l.montant != null ? (
                 <span className="tabular-nums">{formatArgent(l.montant)}</span>
               ) : (
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                  À valider
-                </Badge>
+                <BadgeAValider />
               ),
           },
-          { titre: 'Statut', rendre: (l) => <BadgeStatut statut={l.statut} /> },
+          {
+            titre: 'Statut',
+            rendre: (l) => <BadgeStatut statut={l.statut} />,
+          },
         ]}
         rendreActions={(l) => (
           <div className="flex justify-end gap-1">
+            {(l.rfe || (peutValider && l.statut === 'VALIDEE' && l.montant != null)) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                title={l.rfe ? 'Imprimer le RFE' : 'Générer le RFE'}
+                onClick={() => gererRfe(l)}
+              >
+                <ReceiptText className="size-4" />
+              </Button>
+            )}
             {peutValider && l.statut === 'EN_ATTENTE' && (
               <>
                 <Button
@@ -617,15 +755,26 @@ export default function Locations() {
                 <p>{formatDate(l.dateDebut, true)}</p>
               </div>
               <div>
+                <p className="text-xs text-muted-foreground">Fin</p>
+                <p>
+                  {l.dateFin ? formatDate(l.dateFin, true) : '—'}
+                  {formatDuree(l.dateDebut, l.dateFin) && (
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      ({formatDuree(l.dateDebut, l.dateFin)})
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Échéance</p>
+                <p>
+                  <BadgeEcheance debut={l.dateDebut} fin={l.dateFin} statut={l.statut} />
+                </p>
+              </div>
+              <div>
                 <p className="text-xs text-muted-foreground">Montant</p>
                 <p className="tabular-nums">
-                  {l.montant != null ? (
-                    formatArgent(l.montant)
-                  ) : (
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                      À valider
-                    </Badge>
-                  )}
+                  {l.montant != null ? formatArgent(l.montant) : <BadgeAValider />}
                 </p>
               </div>
             </div>
@@ -633,6 +782,11 @@ export default function Locations() {
           </div>
         )}
       />
+      {rfeAImprimer && (
+        <div className="zone-impression fixed left-[-10000px] top-0">
+          <RfeDocument rfe={rfeAImprimer} />
+        </div>
+      )}
     </div>
   )
 }

@@ -68,6 +68,7 @@ function FilAriane() {
 
 export default function AppLayout() {
   const { utilisateur } = useAuth()
+  const { pathname } = useLocation()
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -83,7 +84,9 @@ export default function AppLayout() {
             </div>
           </header>
           <main className="flex flex-1 flex-col gap-6 p-6">
-            <Outlet />
+            <div key={pathname} className="animate-fade-up flex flex-1 flex-col gap-6">
+              <Outlet />
+            </div>
           </main>
         </SidebarInset>
       </SidebarProvider>

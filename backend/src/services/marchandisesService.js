@@ -192,6 +192,8 @@ async function lister(req) {
           gareOrigine: { select: { code: true } },
           gareDestination: { select: { code: true } },
           lignes: { select: { id: true } },
+          bran: { select: { id: true, numero: true } },
+          _count: { select: { arrivages: true } },
         },
       }),
       prisma.envoi.count({ where }),

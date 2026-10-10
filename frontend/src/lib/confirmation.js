@@ -21,7 +21,7 @@ export function confirmerAction({
   libelleConfirmer = 'Confirmer',
   libelleAnnuler = 'Annuler',
   icone = 'question',
-  couleurConfirmer = '#1d4ed8',
+  couleurConfirmer = '#16a34a',
 }) {
   return Swal.fire({
     title: titre,
@@ -41,7 +41,7 @@ export async function demanderMotif({
   titre,
   texte,
   libelleConfirmer = 'Confirmer',
-  couleurConfirmer = '#1d4ed8',
+  couleurConfirmer = '#16a34a',
 }) {
   const { isConfirmed, value } = await Swal.fire({
     title: titre,

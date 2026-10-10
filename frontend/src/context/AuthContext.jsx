@@ -1,12 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
+import Celebration from '@/components/Celebration'
 import api, { CLE_TOKEN, messageApi } from '@/services/api'
 
 const AuthContext = createContext(null)
 
+const CLE_CONFETTIS = 'fce_confettis_premiere_connexion'
+
 export function AuthProvider({ children }) {
   const [utilisateur, setUtilisateur] = useState(null)
   const [chargement, setChargement] = useState(true)
+  const [celebrer, setCelebrer] = useState(false)
 
   useEffect(() => {
     let actif = true
@@ -36,6 +40,10 @@ export function AuthProvider({ children }) {
       const { data } = await api.post('/auth/login', { email, motDePasse })
       localStorage.setItem(CLE_TOKEN, data.token)
       setUtilisateur(data.utilisateur)
+      if (!localStorage.getItem(CLE_CONFETTIS)) {
+        localStorage.setItem(CLE_CONFETTIS, '1')
+        setCelebrer(true)
+      }
       return data.utilisateur
     } catch (erreur) {
       throw new Error(messageApi(erreur, 'Connexion impossible'))
@@ -57,7 +65,12 @@ export function AuthProvider({ children }) {
     [utilisateur, chargement, connexion, deconnexion]
   )
 
-  return <AuthContext.Provider value={valeur}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={valeur}>
+      {celebrer && <Celebration duree={5000} />}
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

@@ -114,7 +114,14 @@ async function lister(req) {
         take,
         orderBy: { [champTri]: ordre },
         include: {
-          envoi: { select: { reference: true, destinataireNom: true, statut: true } },
+          envoi: {
+            select: {
+              reference: true,
+              destinataireNom: true,
+              statut: true,
+              bran: { select: { id: true, numero: true } },
+            },
+          },
           train: { select: { numero: true } },
           gare: { select: { code: true } },
         },

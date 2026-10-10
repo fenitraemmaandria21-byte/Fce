@@ -149,8 +149,8 @@ export default function Trains() {
           <SectionListe
             colonnes={[
               { titre: 'Numéro', cle: 'numero' },
-              { titre: 'Origine', cle: 'origine' },
-              { titre: 'Destination', cle: 'destination' },
+              { titre: 'Origine', cle: 'origine', tronquer: true },
+              { titre: 'Destination', cle: 'destination', tronquer: true },
               {
                 titre: 'Jours',
                 rendre: (l) => (

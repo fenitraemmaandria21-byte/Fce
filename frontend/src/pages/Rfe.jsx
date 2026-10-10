@@ -1,11 +1,13 @@
-import { Plus } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { Plus, Printer } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import DialogueFormulaire from '@/components/DialogueFormulaire'
 import PageTable from '@/components/PageTable'
+import RfeDocument from '@/components/RfeDocument'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -32,7 +34,17 @@ export default function Rfe() {
   const [erreurChamp, setErreurChamp] = useState(null)
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
+  const [aImprimer, setAImprimer] = useState(null)
   const rechargerRef = useRef(null)
+
+  useEffect(() => {
+    if (!aImprimer) return undefined
+    const minuteur = setTimeout(() => {
+      window.print()
+      setAImprimer(null)
+    }, 150)
+    return () => clearTimeout(minuteur)
+  }, [aImprimer])
 
   const locations = useApi('/locations', { limit: 100, statut: 'VALIDEE' })
   const locationsFacturables = (locations.donnees?.donnees || []).filter(
@@ -46,6 +58,15 @@ export default function Rfe() {
     setCreationOuverte(true)
   }
 
+  const imprimer = async (id) => {
+    try {
+      const { data } = await api.get(`/rfe/${id}`)
+      setAImprimer(data)
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Impression impossible'))
+    }
+  }
+
   const soumettre = async () => {
     const resultat = rfeSchema.safeParse({ locationId })
     if (!resultat.success) {
@@ -55,10 +76,11 @@ export default function Rfe() {
     setEnCours(true)
     setErreurGlobale(null)
     try {
-      await api.post('/rfe', resultat.data)
+      const { data } = await api.post('/rfe', resultat.data)
       toast.success('RFE créé.')
       setCreationOuverte(false)
       rechargerRef.current?.()
+      imprimer(data.id)
     } catch (erreur) {
       setErreurGlobale(messageApi(erreur, 'Création impossible'))
     } finally {
@@ -67,6 +89,7 @@ export default function Rfe() {
   }
 
   return (
+    <>
     <PageTable
       titre="RFE"
       description="Relevé de fin d’exploitation : facturation liée à une location validée. Numéros générés automatiquement (RFE/FAC/REC-<année>-<séquence>)."
@@ -127,12 +150,25 @@ export default function Rfe() {
       colonnes={[
         { titre: 'N°', align: 'right', rendre: (l) => <span className="font-medium tabular-nums">{l.numero || '—'}</span> },
         { titre: 'Date', rendre: (l) => formatDate(l.dateRfe) },
-        { titre: 'Client', rendre: (l) => l.location?.client?.nom || '—' },
+        { titre: 'Client', tronquer: true, titreInfo: (l) => l.location?.client?.nom, rendre: (l) => l.location?.client?.nom || '—' },
         { titre: 'Zone', rendre: (l) => (l.location?.zone?.code ? <Badge variant="outline">{l.location.zone.code}</Badge> : '—') },
         { titre: 'Montant', align: 'right', rendre: (l) => <span className="font-medium tabular-nums">{formatArgent(l.montant)}</span> },
         { titre: 'N° facture', align: 'right', rendre: (l) => <span className="tabular-nums">{l.factureNumero || '—'}</span> },
         { titre: 'N° reçu', align: 'right', rendre: (l) => <span className="tabular-nums">{l.recuNumero || '—'}</span> },
       ]}
+      rendreActions={(l) => (
+        <div className="flex justify-end gap-1">
+          <Button variant="ghost" size="sm" title="Imprimer le RFE" onClick={() => imprimer(l.id)}>
+            <Printer className="size-4" />
+          </Button>
+        </div>
+      )}
     />
+    {aImprimer && (
+      <div className="zone-impression fixed left-[-10000px] top-0">
+        <RfeDocument rfe={aImprimer} />
+      </div>
+    )}
+    </>
   )
 }

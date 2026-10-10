@@ -102,9 +102,13 @@ function ParametresSysteme() {
       ),
     },
     { titre: 'Valeur', rendre: (l) => <Marqueur valeur={l.valeur} /> },
-    { titre: 'Description', cle: 'description' },
+    { titre: 'Description', cle: 'description', tronquer: true, largeur: 'max-w-[22rem]' },
     {
       titre: 'Modifié le',
+      tronquer: true,
+      largeur: 'max-w-[18rem]',
+      titreInfo: (l) =>
+        `${formatDate(l.updatedAt, true)}${l.modifiePar?.nom ? ` par ${l.modifiePar.nom}` : ''}`,
       rendre: (l) => {
         const auteur = l.modifiePar?.nom ? `par ${l.modifiePar.nom}` : ''
         return (

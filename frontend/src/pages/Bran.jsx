@@ -1,8 +1,9 @@
-import { Plus, Trash2 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { Plus, Printer, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
 import { z } from 'zod'
 
+import BranDocument from '@/components/BranDocument'
 import DialogueFormulaire from '@/components/DialogueFormulaire'
 import PageTable from '@/components/PageTable'
 import { Badge } from '@/components/ui/badge'
@@ -48,7 +49,17 @@ export default function Bran() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
+  const [aImprimer, setAImprimer] = useState(null)
   const rechargerRef = useRef(null)
+
+  useEffect(() => {
+    if (!aImprimer) return undefined
+    const minuteur = setTimeout(() => {
+      window.print()
+      setAImprimer(null)
+    }, 150)
+    return () => clearTimeout(minuteur)
+  }, [aImprimer])
 
   const envois = useApi('/marchandises', { limit: 100 })
 
@@ -74,6 +85,15 @@ export default function Bran() {
     setFormulaire((f) => ({ ...f, lignes: f.lignes.filter((_, i) => i !== index) }))
   }
 
+  const imprimer = async (l) => {
+    try {
+      const { data } = await api.get(`/bran/${l.id}`)
+      setAImprimer(data)
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Impression impossible'))
+    }
+  }
+
   const soumettre = async () => {
     const resultat = branSchema.safeParse(formulaire)
     if (!resultat.success) {
@@ -89,7 +109,7 @@ export default function Bran() {
     setErreurGlobale(null)
     try {
       const { envoiId, lignes } = resultat.data
-      await api.post('/bran', {
+      const { data } = await api.post('/bran', {
         lignes: lignes.map((l) => ({
           designation: l.designation || null,
           montant: Number(l.montant),
@@ -100,6 +120,7 @@ export default function Bran() {
       toast.success('BRAN créé.')
       setCreationOuverte(false)
       rechargerRef.current?.()
+      imprimer(data)
     } catch (erreur) {
       setErreurGlobale(messageApi(erreur, 'Enregistrement impossible'))
     } finally {
@@ -108,7 +129,8 @@ export default function Bran() {
   }
 
   return (
-    <PageTable
+    <>
+      <PageTable
       titre="BRAN"
       description="Bordereau de renseignements automatiques numériques. Numéro généré automatiquement (BRAN-<année>-<séquence>)."
       endpoint="/bran"
@@ -211,6 +233,9 @@ export default function Bran() {
         { titre: 'Date', rendre: (l) => formatDate(l.dateBran) },
         {
           titre: 'Envoi',
+          tronquer: true,
+          titreInfo: (l) =>
+            l.envoi ? `${l.envoi.reference || ''} (${l.envoi.expediteurNom})` : '',
           rendre: (l) =>
             l.envoi ? (
               <span>
@@ -228,6 +253,19 @@ export default function Bran() {
         },
         { titre: 'Lignes', align: 'right', rendre: (l) => <Badge variant="outline">{formatNombre(l.lignes?.length || 0)}</Badge> },
       ]}
+      rendreActions={(l) => (
+        <div className="flex justify-end gap-1">
+          <Button variant="ghost" size="sm" title="Imprimer le BRAN" onClick={() => imprimer(l)}>
+            <Printer className="size-4" />
+          </Button>
+        </div>
+      )}
     />
+    {aImprimer && (
+      <div className="zone-impression fixed left-[-10000px] top-0">
+        <BranDocument bran={aImprimer} />
+      </div>
+    )}
+    </>
   )
 }

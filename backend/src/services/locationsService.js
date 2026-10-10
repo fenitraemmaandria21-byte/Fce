@@ -292,6 +292,7 @@ async function lister(req) {
         include: {
           client: { select: { nom: true, contact: true, adresse: true } },
           zone: { select: { code: true } },
+          rfe: { select: { id: true, numero: true } },
         },
       }),
       prisma.location.count({ where }),
@@ -320,31 +321,29 @@ async function recuperer(id) {
   });
 }
 
-// DELETE /api/locations/:id — suppression (bloquée si un RFE est émis).
+// DELETE /api/locations/:id — suppression (le RFE associé, s'il existe, est supprimé aussi).
 async function supprimer(id, appelant) {
   return dbCall(async () => {
     const prisma = getPrisma();
     const existant = await prisma.location.findUnique({ where: { id }, include: { rfe: true } });
     if (!existant) throw new ApiError(404, 'LOCATION_INTROUVE', 'Location introuvable');
-    if (existant.rfe) {
-      throw new ApiError(
-        409,
-        'LOCATION_FACTUREE',
-        'Suppression impossible : un RFE est déjà émis pour cette location.'
-      );
-    }
 
-    await prisma.location.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      if (existant.rfe) {
+        await tx.rfe.delete({ where: { id: existant.rfe.id } });
+      }
+      await tx.location.delete({ where: { id } });
+    });
 
     await journaliser({
       utilisateurId: appelant.id,
       action: 'SUPPRESSION_LOCATION',
       entite: 'Location',
       entiteId: id,
-      details: { type: existant.type, montant: existant.montant },
+      details: { type: existant.type, montant: existant.montant, rfeSupprime: Boolean(existant.rfe) },
     });
 
-    return { supprime: true };
+    return { supprime: true, rfeSupprime: Boolean(existant.rfe) };
   });
 }
 

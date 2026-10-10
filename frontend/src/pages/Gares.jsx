@@ -182,7 +182,7 @@ export default function Gares() {
       {erreur && (
         <AlerteErreur
           message={message}
-          aide="Démarrez PostgreSQL (docker compose up -d postgres), appliquez les migrations puis le seed."
+          aide="Démarrez PostgreSQL (docker compose up -d postgres) puis appliquez les migrations."
           onReessayer={recharger}
         />
       )}
@@ -214,7 +214,11 @@ export default function Gares() {
                     <TableRow key={gare.id}>
                       <TableCell className="font-medium">{gare.code}</TableCell>
                       <TableCell className="text-right tabular-nums">{gare.pk}</TableCell>
-                      <TableCell>{gare.nom || <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell title={gare.nom || ''}>
+                        <span className="block max-w-[16rem] truncate">
+                          {gare.nom || <span className="text-muted-foreground">—</span>}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">{gare.zone?.code || '—'}</Badge>
                       </TableCell>

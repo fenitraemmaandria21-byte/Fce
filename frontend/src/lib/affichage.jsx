@@ -116,6 +116,66 @@ export function BadgeRole({ role }) {
   return <Badge variant={role === 'SUPERADMIN' ? 'default' : 'outline'}>{LIBELLES_ROLE[role] || role}</Badge>
 }
 
+// Badge « À valider » (donnée non officielle ou montant non configuré).
+export function BadgeAValider() {
+  return (
+    <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+      À valider
+    </Badge>
+  )
+}
+
+// Durée lisible entre deux dates : "2 j 3 h", "3 h 30", "45 min".
+export function formatDuree(debut, fin) {
+  if (!debut || !fin) return null
+  const ms = new Date(fin).getTime() - new Date(debut).getTime()
+  if (!Number.isFinite(ms) || ms < 0) return null
+  const totalMinutes = Math.round(ms / 60000)
+  const jours = Math.floor(totalMinutes / 1440)
+  const heures = Math.floor((totalMinutes % 1440) / 60)
+  const minutes = totalMinutes % 60
+  const parties = []
+  if (jours) parties.push(`${jours} j`)
+  if (heures) parties.push(`${heures} h`)
+  if (minutes && !jours) parties.push(`${minutes} min`)
+  return parties.length ? parties.join(' ') : '0 min'
+}
+
+// Échéance calculée d'une location : à venir / en cours / terminée.
+export function BadgeEcheance({ debut, fin, statut }) {
+  if (statut === 'REFUSEE') return null
+  if (!fin) {
+    return (
+      <Badge variant="outline" className="text-muted-foreground">
+        Fin non définie
+      </Badge>
+    )
+  }
+  const finDate = new Date(fin).getTime()
+  if (!Number.isFinite(finDate)) return null
+  const maintenant = Date.now()
+  const debutDate = debut ? new Date(debut).getTime() : null
+  if (finDate < maintenant) {
+    return (
+      <Badge variant="secondary" className="bg-slate-200 text-slate-700">
+        Terminée
+      </Badge>
+    )
+  }
+  if (debutDate && debutDate <= maintenant) {
+    return (
+      <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">
+        En cours
+      </Badge>
+    )
+  }
+  return (
+    <Badge variant="secondary" className="bg-sky-100 text-sky-800">
+      À venir
+    </Badge>
+  )
+}
+
 // Date ISO → "12/03/2026" (ou avec heure si demandé).
 export function formatDate(valeur, avecHeure = false) {
   if (!valeur) return '—'

@@ -249,7 +249,7 @@ export default function Statistiques({ sansTitre = false }) {
                 <Tableau
                   lignes={marchandises.donnees.parDestination?.donnees || []}
                   colonnes={[
-                    { titre: 'Destination', cle: 'destination' },
+                    { titre: 'Destination', cle: 'destination', tronquer: true },
                     { titre: 'Nombre', align: 'right', rendre: (l) => formatNombre(l.nombre) },
                   ]}
                 />
