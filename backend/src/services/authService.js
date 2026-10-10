@@ -71,4 +71,68 @@ function logout() {
   return { message: 'Déconnexion effectuée' };
 }
 
-module.exports = { login, profil, logout };
+// GET /api/auth/bootstrap/status — indique si l'amorçage est requis et possible.
+async function statutAmorcage() {
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const total = await prisma.user.count();
+    return {
+      requis: total === 0,
+      actif: Boolean(env.bootstrapSecret),
+    };
+  });
+}
+
+// POST /api/auth/bootstrap — crée le PREMIER superadmin.
+// Sécurité : réservé au tout premier démarrage (aucun utilisateur) et
+// protégé par le secret BOOTSTRAP_SECRET.
+async function amorcer(donnees) {
+  if (!env.bootstrapSecret) {
+    throw new ApiError(
+      403,
+      'AMORCAGE_DESACTIVE',
+      "L'amorçage est désactivé : configurez la variable BOOTSTRAP_SECRET."
+    );
+  }
+  if (donnees.secret !== env.bootstrapSecret) {
+    throw new ApiError(403, 'SECRET_INVALIDE', "Secret d'amorçage invalide");
+  }
+
+  return dbCall(async () => {
+    const prisma = getPrisma();
+
+    const user = await prisma.$transaction(async (tx) => {
+      const total = await tx.user.count();
+      if (total > 0) {
+        throw new ApiError(
+          409,
+          'DEJA_INITIALISE',
+          'Un compte existe déjà : amorçage impossible.'
+        );
+      }
+
+      const hash = await bcrypt.hash(donnees.motDePasse, 10);
+      return tx.user.create({
+        data: {
+          email: donnees.email,
+          nom: donnees.nom,
+          motDePasse: hash,
+          role: 'SUPERADMIN',
+        },
+        select: { id: true, email: true, nom: true, role: true, actif: true },
+      });
+    });
+
+    await journaliser({
+      utilisateurId: user.id,
+      action: 'AMORCAGE_SUPERADMIN',
+      entite: 'User',
+      entiteId: user.id,
+      details: { email: user.email },
+    });
+
+    return user;
+  });
+}
+
+module.exports = { login, profil, logout, statutAmorcage, amorcer };

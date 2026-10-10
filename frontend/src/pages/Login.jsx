@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { Loader2, ShieldCheck, BarChart3, FileText } from 'lucide-react'
+import { Loader2, ShieldCheck, BarChart3, FileText, Rocket } from 'lucide-react'
 import { z } from 'zod'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -15,10 +15,18 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/context/AuthContext'
+import api, { messageApi } from '@/services/api'
 
 const connexionSchema = z.object({
   email: z.email('Adresse e-mail invalide'),
   motDePasse: z.string().min(1, 'Mot de passe requis'),
+})
+
+const amorcageSchema = z.object({
+  nom: z.string().trim().min(2, 'Nom requis (2 caractères min.)'),
+  email: z.email('Adresse e-mail invalide'),
+  motDePasse: z.string().min(8, 'Mot de passe : 8 caractères minimum'),
+  secret: z.string().min(1, "Secret d'amorçage requis"),
 })
 
 const ANNEE_COURANTE = new Date().getFullYear()
@@ -33,7 +41,55 @@ export default function Login() {
   const [erreurServeur, setErreurServeur] = useState(null)
   const [enCours, setEnCours] = useState(false)
 
+  // Amorçage : { requis, actif } — null pendant le chargement.
+  const [amorcage, setAmorcage] = useState(null)
+  const [nom, setNom] = useState('')
+  const [secret, setSecret] = useState('')
+
+  useEffect(() => {
+    let actif = true
+    api
+      .get('/auth/bootstrap/status')
+      .then((r) => {
+        if (actif) setAmorcage(r.data)
+      })
+      .catch(() => {
+        if (actif) setAmorcage({ requis: false, actif: false })
+      })
+    return () => {
+      actif = false
+    }
+  }, [])
+
   if (utilisateur) return <Navigate to="/" replace />
+
+  const modeAmorcage = amorcage?.requis === true
+
+  async function amorcer(evenement) {
+    evenement.preventDefault()
+    setErreurServeur(null)
+
+    const validation = amorcageSchema.safeParse({ nom, email, motDePasse, secret })
+    if (!validation.success) {
+      const champs = {}
+      for (const issue of validation.error.issues) {
+        champs[issue.path[0]] = issue.message
+      }
+      setErreurs(champs)
+      return
+    }
+    setErreurs({})
+    setEnCours(true)
+    try {
+      await api.post('/auth/bootstrap', { nom, email, motDePasse, secret })
+      await connexion(email, motDePasse)
+      navigate('/', { replace: true })
+    } catch (erreur) {
+      setErreurServeur(messageApi(erreur, "Amorçage impossible"))
+    } finally {
+      setEnCours(false)
+    }
+  }
 
   async function soumettre(evenement) {
     evenement.preventDefault()
@@ -107,13 +163,109 @@ export default function Login() {
               <img src="/logo.jpg" alt="Logo FCE" className="h-full w-auto object-contain" />
             </span>
             <div>
-              <CardTitle className="text-2xl">Connexion</CardTitle>
+              <CardTitle className="text-2xl">
+                {modeAmorcage ? 'Première initialisation' : 'Connexion'}
+              </CardTitle>
               <CardDescription>
-                Accédez à la plateforme avec votre compte.
+                {modeAmorcage
+                  ? 'Créez le compte superadministrateur pour démarrer la plateforme.'
+                  : 'Accédez à la plateforme avec votre compte.'}
               </CardDescription>
             </div>
           </CardHeader>
           <CardContent>
+            {amorcage === null ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground">
+                <Loader2 className="animate-spin" />
+              </div>
+            ) : modeAmorcage ? (
+              <div className="space-y-4">
+                {!amorcage.actif ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Amorçage désactivé</AlertTitle>
+                    <AlertDescription>
+                      Définissez la variable d’environnement <code>BOOTSTRAP_SECRET</code> sur
+                      le serveur, puis rechargez cette page.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <form onSubmit={amorcer} className="space-y-4" noValidate>
+                    {erreurServeur && (
+                      <Alert variant="destructive">
+                        <AlertTitle>Amorçage impossible</AlertTitle>
+                        <AlertDescription>{erreurServeur}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="nom">Nom complet</Label>
+                      <Input
+                        id="nom"
+                        autoComplete="name"
+                        placeholder="Super Administrateur"
+                        value={nom}
+                        onChange={(e) => setNom(e.target.value)}
+                        aria-invalid={Boolean(erreurs.nom)}
+                      />
+                      {erreurs.nom && <p className="text-sm text-destructive">{erreurs.nom}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Adresse e-mail</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder="admin@fce.mg"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        aria-invalid={Boolean(erreurs.email)}
+                      />
+                      {erreurs.email && <p className="text-sm text-destructive">{erreurs.email}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="motDePasse">Mot de passe</Label>
+                      <Input
+                        id="motDePasse"
+                        type="password"
+                        autoComplete="new-password"
+                        value={motDePasse}
+                        onChange={(e) => setMotDePasse(e.target.value)}
+                        aria-invalid={Boolean(erreurs.motDePasse)}
+                      />
+                      {erreurs.motDePasse && (
+                        <p className="text-sm text-destructive">{erreurs.motDePasse}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="secret">Secret d’amorçage</Label>
+                      <Input
+                        id="secret"
+                        type="password"
+                        autoComplete="off"
+                        value={secret}
+                        onChange={(e) => setSecret(e.target.value)}
+                        aria-invalid={Boolean(erreurs.secret)}
+                      />
+                      {erreurs.secret && (
+                        <p className="text-sm text-destructive">{erreurs.secret}</p>
+                      )}
+                    </div>
+
+                    <Button type="submit" className="w-full" disabled={enCours}>
+                      {enCours ? <Loader2 className="animate-spin" /> : <Rocket />}
+                      Créer le superadministrateur
+                    </Button>
+
+                    <p className="text-xs text-muted-foreground">
+                      Cette action n’est possible que si aucun compte n’existe encore.
+                    </p>
+                  </form>
+                )}
+              </div>
+            ) : (
             <form onSubmit={soumettre} className="space-y-4" noValidate>
               {erreurServeur && (
                 <Alert variant="destructive">
@@ -162,6 +314,7 @@ export default function Login() {
               pas disponible.
             </p>
           </form>
+            )}
         </CardContent>
       </Card>
       </main>

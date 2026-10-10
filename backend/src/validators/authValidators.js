@@ -31,9 +31,17 @@ const changerStatutUtilisateurSchema = z.object({
   actif: z.boolean({ required_error: 'Statut requis' }),
 });
 
+const amorcageSchema = z.object({
+  nom: z.string().trim().min(2, 'Nom requis (2 caractères min.)').max(120),
+  email,
+  motDePasse,
+  secret: z.string().min(1, "Secret d'amorçage requis"),
+});
+
 module.exports = {
   loginSchema,
   creerUtilisateurSchema,
   modifierUtilisateurSchema,
   changerStatutUtilisateurSchema,
+  amorcageSchema,
 };

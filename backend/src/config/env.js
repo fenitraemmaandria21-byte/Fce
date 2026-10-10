@@ -11,6 +11,9 @@ const env = {
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  // Secret d'amorçage : autorise la création du PREMIER superadmin
+  // tant qu'aucun utilisateur n'existe. Vide => amorçage désactivé.
+  bootstrapSecret: process.env.BOOTSTRAP_SECRET || null,
 };
 
 

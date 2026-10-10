@@ -27,6 +27,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      BOOTSTRAP_SECRET: ${BOOTSTRAP_SECRET}
       PORT: 4000
       FRONTEND_URL: ${FRONTEND_URL_DOCKER:-http://localhost:8888}
       NODE_ENV: production

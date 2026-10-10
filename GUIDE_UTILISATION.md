@@ -16,6 +16,14 @@ Ce guide explique, étape par étape, comment utiliser chaque partie de l'applic
 > Comptes fournis par l'administrateur. Rôles possibles : **SUPERADMIN**,
 > **ADMIN**, **AGENT** (voir §10).
 
+> **Première utilisation (base vide)** : si aucun compte n'existe encore,
+> l'écran de connexion affiche **Première initialisation**. Renseigner le nom,
+> l'e-mail, un mot de passe (8 caractères min.) et le **secret d'amorçage**
+> défini par la variable d'environnement `BOOTSTRAP_SECRET` sur le serveur,
+> puis cliquer sur **Créer le superadministrateur**. Cette opération n'est
+> possible qu'une seule fois : ensuite, les comptes se gèrent via
+> **Administration › Utilisateurs** (§10).
+
 ---
 
 ## 2. Comprendre l'écran principal
