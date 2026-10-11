@@ -50,8 +50,8 @@ function BadgeStatutCaisse({ statut }) {
 function classeEcart(ecart) {
   if (ecart === null || ecart === undefined) return 'text-muted-foreground'
   if (ecart < 0) return 'text-destructive'
-  if (ecart > 0) return 'text-amber-600'
-  return 'text-emerald-600'
+  if (ecart > 0) return 'text-amber-600 dark:text-amber-400'
+  return 'text-emerald-600 dark:text-emerald-400'
 }
 
 function LigneInfo({ libelle, valeur, className }) {

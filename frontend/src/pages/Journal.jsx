@@ -50,10 +50,10 @@ const LIBELLES_ACTION = {
 // Couleur selon la nature de l'action.
 function classesAction(action) {
   if (action.startsWith('SUPPRESSION') || action.startsWith('REFUS'))
-    return 'bg-red-100 text-red-800'
+    return 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300'
   if (action.startsWith('CREATION') || action.startsWith('VALIDATION') || action.startsWith('AMORCAGE'))
-    return 'bg-fce-100 text-fce-700'
-  if (action.startsWith('MODIFICATION')) return 'bg-amber-100 text-amber-800'
+    return 'bg-fce-100 text-fce-700 dark:bg-fce-500/15 dark:text-fce-500'
+  if (action.startsWith('MODIFICATION')) return 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'
   return ''
 }
 
@@ -93,7 +93,7 @@ export default function Journal() {
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-fce-100 text-fce-700">
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-fce-100 text-fce-700 dark:bg-fce-500/15 dark:text-fce-500">
           <Activity className="size-6" />
         </span>
         <div>

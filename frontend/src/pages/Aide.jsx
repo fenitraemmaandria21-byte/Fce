@@ -6,6 +6,7 @@ import {
   LifeBuoy,
   LogIn,
   MessageSquare,
+  Moon,
   MousePointerClick,
   Package,
   PackageCheck,
@@ -55,6 +56,15 @@ const ETAPES = [
 ]
 
 const SECTIONS = [
+  {
+    icon: Moon,
+    titre: 'Apparence (mode clair / sombre)',
+    points: [
+      'Le bouton en forme de soleil/lune de l’en-tête ouvre le menu Apparence.',
+      'Clair, Sombre ou Système : « Système » suit automatiquement le réglage de votre appareil.',
+      'Le choix est mémorisé sur cet appareil et s’applique à tous les écrans.',
+    ],
+  },
   {
     icon: Home,
     titre: 'Accueil et tableau de bord',
@@ -174,7 +184,7 @@ export default function Aide() {
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-fce-100 text-fce-700">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-fce-100 text-fce-700 dark:bg-fce-500/15 dark:text-fce-500">
           <LifeBuoy className="size-6" />
         </span>
         <div>

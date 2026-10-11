@@ -4,6 +4,7 @@ import { LifeBuoy } from 'lucide-react'
 
 import AppSidebar from '@/components/layout/AppSidebar'
 import NotificationsBell from '@/components/NotificationsBell'
+import ThemeToggle from '@/components/ThemeToggle'
 import { BadgeRole } from '@/lib/affichage'
 import { Button } from '@/components/ui/button'
 import {
@@ -88,6 +89,7 @@ export default function AppLayout() {
             <FilAriane />
             <div className="ml-auto flex items-center gap-2">
               <NotificationsBell />
+              <ThemeToggle />
               <Button asChild variant="ghost" size="icon" title="Comment utiliser ?">
                 <Link to="/aide" aria-label="Comment utiliser l’application">
                   <LifeBuoy />

@@ -371,7 +371,7 @@ export default function Messagerie() {
                     c.id === activeId ? 'bg-muted' : ''
                   }`}
                 >
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-fce-100 text-xs font-semibold text-fce-700">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-fce-100 text-xs font-semibold text-fce-700 dark:bg-fce-500/15 dark:text-fce-500">
                     {initiales(titreConversation(c, moiId))}
                   </span>
                   <span className="min-w-0 flex-1">

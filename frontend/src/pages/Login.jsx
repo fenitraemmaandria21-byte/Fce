@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import ThemeToggle from '@/components/ThemeToggle'
 import { useAuth } from '@/context/AuthContext'
 import api, { messageApi } from '@/services/api'
 
@@ -156,10 +157,11 @@ export default function Login() {
         </p>
       </aside>
 
-      <main className="flex flex-1 items-center justify-center bg-slate-50 p-4">
-        <Card className="w-full max-w-md border-slate-200 shadow-sm">
+      <main className="relative flex flex-1 items-center justify-center bg-background p-4">
+        <ThemeToggle className="absolute right-4 top-4" />
+        <Card className="w-full max-w-md border-border shadow-sm">
           <CardHeader className="space-y-3">
-            <span className="grid h-16 place-items-center overflow-hidden rounded-xl bg-white p-1 ring-1 ring-slate-200 lg:hidden">
+            <span className="grid h-16 place-items-center overflow-hidden rounded-xl bg-white p-1 ring-1 ring-border lg:hidden">
               <img src="/logo.jpg" alt="Logo FCE" className="h-full w-auto object-contain" />
             </span>
             <div>

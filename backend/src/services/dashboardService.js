@@ -58,6 +58,7 @@ async function tableauDeBord() {
       nombreArrivages,
       locations,
       recetteLocations,
+      recetteMarchandises,
       activiteRecente,
     ] = await Promise.all([
       prisma.billet.count({ where: { statut: 'VENDU' } }),
@@ -70,6 +71,8 @@ async function tableauDeBord() {
         where: { statut: 'VALIDEE' },
         _sum: { montant: true },
       }),
+      // Recette marchandises = montant des BRAN (envois facturés), comme le module Caisse.
+      prisma.bran.aggregate({ _sum: { montantTotal: true } }),
       prisma.journalActivite.findMany({
         take: 10,
         orderBy: { createdAt: 'desc' },
@@ -86,6 +89,7 @@ async function tableauDeBord() {
         nombreArrivages,
         nombreLocations: locations,
         recetteLocations: recetteLocations._sum.montant || 0,
+        recetteMarchandises: recetteMarchandises._sum.montantTotal || 0,
       },
       activiteRecente,
     };
@@ -283,7 +287,7 @@ async function statsLocation(req) {
   });
 }
 
-// GET /api/statistiques/recettes — billetterie + location.
+// GET /api/statistiques/recettes — billetterie + location + marchandises.
 async function statsRecettes(req) {
   return dbCall(async () => {
     const prisma = getPrisma();
@@ -291,18 +295,25 @@ async function statsRecettes(req) {
 
     const parMois = await prisma.$queryRaw`
       SELECT mois, SUM(billets)::int AS billets, SUM(locations)::int AS locations,
-             (COALESCE(SUM(billets),0) + COALESCE(SUM(locations),0))::int AS total
+             SUM(marchandises)::int AS marchandises,
+             (COALESCE(SUM(billets),0) + COALESCE(SUM(locations),0) + COALESCE(SUM(marchandises),0))::int AS total
       FROM (
         SELECT date_trunc('month', "createdAt")::date AS mois,
-               SUM("tarif") AS billets, 0 AS locations
+               SUM("tarif") AS billets, 0 AS locations, 0 AS marchandises
         FROM "billets"
         WHERE "createdAt" >= ${de} AND "createdAt" <= ${au} AND "statut" = 'VENDU'
         GROUP BY 1
         UNION ALL
         SELECT date_trunc('month', "createdAt")::date AS mois,
-               0, SUM("montant")
+               0, SUM("montant"), 0
         FROM "locations"
         WHERE "createdAt" >= ${de} AND "createdAt" <= ${au} AND "statut" = 'VALIDEE'
+        GROUP BY 1
+        UNION ALL
+        SELECT date_trunc('month', "dateBran")::date AS mois,
+               0, 0, SUM("montantTotal")
+        FROM "bran"
+        WHERE "dateBran" >= ${de} AND "dateBran" <= ${au}
         GROUP BY 1
       ) combined
       GROUP BY mois
@@ -316,12 +327,17 @@ async function statsRecettes(req) {
       where: { createdAt: { gte: de, lte: au }, statut: 'VALIDEE' },
       _sum: { montant: true },
     });
+    const totalMarchandises = await prisma.bran.aggregate({
+      where: { dateBran: { gte: de, lte: au } },
+      _sum: { montantTotal: true },
+    });
 
     return {
       periode: { de, au },
       total: {
         billetterie: totalBillets._sum.tarif || 0,
         location: totalLocations._sum.montant || 0,
+        marchandises: totalMarchandises._sum.montantTotal || 0,
         cumul: (totalBillets._sum.tarif || 0) + (totalLocations._sum.montant || 0),
       },
       parMois: reponseOuVide(
@@ -329,6 +345,7 @@ async function statsRecettes(req) {
           mois: r.mois,
           billets: Number(r.billets || 0),
           locations: Number(r.locations || 0),
+          marchandises: Number(r.marchandises || 0),
           total: Number(r.total || 0),
         }))
       ),

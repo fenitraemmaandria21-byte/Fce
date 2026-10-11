@@ -170,7 +170,7 @@ export default function AppSidebar() {
               variant="ghost"
               className="h-12 w-full justify-start gap-2 px-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center"
             >
-              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-fce-100 text-xs font-semibold text-fce-700 group-data-[collapsible=icon]:hidden">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-fce-100 text-xs font-semibold text-fce-700 group-data-[collapsible=icon]:hidden dark:bg-fce-500/15 dark:text-fce-500">
                 {(utilisateur?.nom || '?').charAt(0).toUpperCase()}
               </span>
               <span className="truncate text-left group-data-[collapsible=icon]:hidden">

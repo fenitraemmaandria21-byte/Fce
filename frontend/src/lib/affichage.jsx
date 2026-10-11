@@ -21,7 +21,7 @@ export function Marqueur({ valeur }) {
   if (valeur === null || valeur === undefined || valeur === '') return '—'
   if (MARQUEURS.has(valeur)) {
     return (
-      <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+      <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
         À valider
       </Badge>
     )
@@ -119,7 +119,7 @@ export function BadgeRole({ role }) {
 // Badge « À valider » (donnée non officielle ou montant non configuré).
 export function BadgeAValider() {
   return (
-    <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+    <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
       À valider
     </Badge>
   )
@@ -157,20 +157,20 @@ export function BadgeEcheance({ debut, fin, statut }) {
   const debutDate = debut ? new Date(debut).getTime() : null
   if (finDate < maintenant) {
     return (
-      <Badge variant="secondary" className="bg-slate-200 text-slate-700">
+      <Badge variant="secondary" className="bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
         Terminée
       </Badge>
     )
   }
   if (debutDate && debutDate <= maintenant) {
     return (
-      <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">
+      <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
         En cours
       </Badge>
     )
   }
   return (
-    <Badge variant="secondary" className="bg-sky-100 text-sky-800">
+    <Badge variant="secondary" className="bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300">
       À venir
     </Badge>
   )

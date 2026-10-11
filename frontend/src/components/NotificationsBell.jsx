@@ -20,16 +20,16 @@ import api, { EVENEMENT_NOTIFICATIONS } from '@/services/api'
 const INTERVALLE = 30000
 
 const ICONES = {
-  BILLET: { icone: Ticket, classes: 'bg-fce-100 text-fce-700' },
-  ENVOI: { icone: Package, classes: 'bg-violet-100 text-violet-700' },
-  ARRIVAGE: { icone: PackageCheck, classes: 'bg-sky-100 text-sky-700' },
-  LOCATION_DEMANDE: { icone: CalendarClock, classes: 'bg-amber-100 text-amber-700' },
-  LOCATION_VALIDEE: { icone: CalendarCheck, classes: 'bg-emerald-100 text-emerald-700' },
-  LOCATION_REFUSEE: { icone: CalendarX, classes: 'bg-rose-100 text-rose-700' },
-  MESSAGE: { icone: MessageSquare, classes: 'bg-indigo-100 text-indigo-700' },
+  BILLET: { icone: Ticket, classes: 'bg-fce-100 text-fce-700 dark:bg-fce-500/15 dark:text-fce-500' },
+  ENVOI: { icone: Package, classes: 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300' },
+  ARRIVAGE: { icone: PackageCheck, classes: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300' },
+  LOCATION_DEMANDE: { icone: CalendarClock, classes: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' },
+  LOCATION_VALIDEE: { icone: CalendarCheck, classes: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' },
+  LOCATION_REFUSEE: { icone: CalendarX, classes: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300' },
+  MESSAGE: { icone: MessageSquare, classes: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300' },
 }
 
-const ICONE_DEFAUT = { icone: CheckCircle2, classes: 'bg-fce-100 text-fce-700' }
+const ICONE_DEFAUT = { icone: CheckCircle2, classes: 'bg-fce-100 text-fce-700 dark:bg-fce-500/15 dark:text-fce-500' }
 
 // « il y a 5 min », « hier », « 12/03/2026 »…
 function depuis(valeur) {
@@ -136,7 +136,7 @@ export default function NotificationsBell() {
             <div className="flex items-center gap-2">
               <span className="font-semibold">Notifications</span>
               {nonLues > 0 && (
-                <span className="rounded-full bg-fce-100 px-2 py-0.5 text-xs font-medium text-fce-700">
+                <span className="rounded-full bg-fce-100 px-2 py-0.5 text-xs font-medium text-fce-700 dark:bg-fce-500/15 dark:text-fce-500">
                   {nonLues} non lue{nonLues > 1 ? 's' : ''}
                 </span>
               )}
@@ -165,7 +165,7 @@ export default function NotificationsBell() {
                     type="button"
                     onClick={() => ouvrirNotification(n)}
                     className={`flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/60 ${
-                      n.lu ? '' : 'bg-fce-50/60'
+                      n.lu ? '' : 'bg-fce-50/60 dark:bg-fce-500/10'
                     }`}
                   >
                     <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${visuel.classes}`}>

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import ThemeToggle from '@/components/ThemeToggle'
 import {
   Card,
   CardContent,
@@ -100,11 +101,14 @@ export default function Accueil({ publique = false }) {
               <p className="text-xs text-muted-foreground">Fitadia Compagnie Express</p>
             </div>
           </div>
-          <Button asChild size="sm" variant={connecte ? 'default' : 'outline'}>
-            <Link to={connecte ? '/accueil' : '/login'}>
-              {connecte ? 'Ouvrir l’application' : 'Se connecter'}
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button asChild size="sm" variant={connecte ? 'default' : 'outline'}>
+              <Link to={connecte ? '/accueil' : '/login'}>
+                {connecte ? 'Ouvrir l’application' : 'Se connecter'}
+              </Link>
+            </Button>
+          </div>
         </header>
       )}
 
@@ -198,7 +202,7 @@ export default function Accueil({ publique = false }) {
               <Card key={service.titre}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <span className="grid size-8 place-items-center rounded-lg bg-fce-100 text-fce-700">
+                    <span className="grid size-8 place-items-center rounded-lg bg-fce-100 text-fce-700 dark:bg-fce-500/15 dark:text-fce-500">
                       <service.icon className="size-4" />
                     </span>
                     {service.titre}

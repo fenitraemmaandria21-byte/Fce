@@ -4,6 +4,7 @@ import {
   Coins,
   Package,
   PackageCheck,
+  Receipt,
   RefreshCw,
   Scale,
   Ticket,
@@ -45,9 +46,21 @@ const COULEURS = {
   fceClair: '#4ade80',
   bleu: '#3b82f6',
   bleuClair: '#60a5fa',
+  orange: '#f59e0b',
 }
 
 const COULEURS_CLASSES = [COULEURS.fce, COULEURS.bleu, COULEURS.fceClair]
+
+// Style des infobulles recharts, aligné sur les tokens du thème (clair/sombre).
+const STYLE_TOOLTIP = {
+  contentStyle: {
+    background: 'var(--popover)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    color: 'var(--popover-foreground)',
+  },
+  labelStyle: { color: 'var(--popover-foreground)' },
+}
 
 function CarteIndicateur({ titre, valeur, format = 'nombre', icone: Icone }) {
   const affiche =
@@ -60,7 +73,7 @@ function CarteIndicateur({ titre, valeur, format = 'nombre', icone: Icone }) {
             {titre}
           </CardTitle>
           {Icone && (
-            <span className="grid size-8 shrink-0 place-items-center rounded-md bg-fce-100 text-fce-700">
+                <span className="grid size-8 shrink-0 place-items-center rounded-md bg-fce-100 text-fce-700 dark:bg-fce-500/15 dark:text-fce-500">
               <Icone className="size-4" />
             </span>
           )}
@@ -98,7 +111,7 @@ function CarteRecettes({ donnees, chargement, erreur }) {
       <CardHeader>
         <CardTitle className="text-base">Recettes par mois</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Billetterie (vert) et locations (bleu) — cette année.
+          Billetterie (vert), locations (bleu) et marchandises (orange) — cette année.
         </p>
       </CardHeader>
       <CardContent>
@@ -111,30 +124,32 @@ function CarteRecettes({ donnees, chargement, erreur }) {
         ) : (
           <ResponsiveContainer width="100%" height={264}>
             <BarChart data={lignes} barGap={4}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey="mois"
                 tickFormatter={dateCourte}
-                tick={{ fontSize: 12 }}
-                stroke="#94a3b8"
+                tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
+                stroke="var(--muted-foreground)"
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
                 tickFormatter={(v) => nf.format(v)}
-                tick={{ fontSize: 12 }}
-                stroke="#94a3b8"
+                tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
+                stroke="var(--muted-foreground)"
                 axisLine={false}
                 tickLine={false}
                 width={70}
               />
               <Tooltip
-                formatter={(valeur, nom) => [formatArgent(Number(valeur)), nom === 'billets' ? 'Billetterie' : 'Locations']}
-                cursor={{ fill: '#f1f5f9' }}
+                formatter={(valeur, nom) => [formatArgent(Number(valeur)), nom]}
+                cursor={{ fill: 'var(--muted)' }}
+                {...STYLE_TOOLTIP}
               />
-              <Legend />
+              <Legend wrapperStyle={{ color: 'var(--foreground)' }} />
               <Bar dataKey="billets" name="Billetterie" fill={COULEURS.fce} radius={[4, 4, 0, 0]} />
               <Bar dataKey="locations" name="Locations" fill={COULEURS.bleu} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="marchandises" name="Marchandises" fill={COULEURS.orange} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -183,8 +198,8 @@ function CarteBilletsParClasse({ donnees, chargement, erreur }) {
                     />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v) => formatNombre(Number(v))} />
-                <Legend />
+                <Tooltip formatter={(v) => formatNombre(Number(v))} {...STYLE_TOOLTIP} />
+                <Legend wrapperStyle={{ color: 'var(--foreground)' }} />
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
@@ -300,6 +315,12 @@ export default function Dashboard() {
             valeur={indicateurs.recetteLocations}
             format="argent"
             icone={Coins}
+          />
+          <CarteIndicateur
+            titre="Recette marchandises"
+            valeur={indicateurs.recetteMarchandises}
+            format="argent"
+            icone={Receipt}
           />
         </div>
 
