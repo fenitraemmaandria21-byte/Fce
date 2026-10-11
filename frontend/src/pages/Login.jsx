@@ -61,7 +61,7 @@ export default function Login() {
     }
   }, [])
 
-  if (utilisateur) return <Navigate to="/" replace />
+  if (utilisateur) return <Navigate to="/accueil" replace />
 
   const modeAmorcage = amorcage?.requis === true
 
@@ -83,7 +83,7 @@ export default function Login() {
     try {
       await api.post('/auth/bootstrap', { nom, email, motDePasse, secret })
       await connexion(email, motDePasse)
-      navigate('/', { replace: true })
+      navigate('/accueil', { replace: true })
     } catch (erreur) {
       setErreurServeur(messageApi(erreur, "Amorçage impossible"))
     } finally {
@@ -108,7 +108,7 @@ export default function Login() {
     setEnCours(true)
     try {
       await connexion(email, motDePasse)
-      navigate('/', { replace: true })
+      navigate('/accueil', { replace: true })
     } catch (erreur) {
       setErreurServeur(erreur.message)
     } finally {

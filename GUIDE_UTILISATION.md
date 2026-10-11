@@ -8,9 +8,11 @@ Ce guide explique, étape par étape, comment utiliser chaque partie de l'applic
 ## 1. Se connecter
 
 1. Ouvrir l'application dans le navigateur : `http://localhost:8888`.
-2. Saisir l'**adresse e-mail** et le **mot de passe** du compte.
-3. Cliquer sur **Se connecter**.
-4. En cas d'erreur, un message rouge s'affiche sous le formulaire ; les jetons
+2. La **page d'accueil** présente la FCE et ses services ; cliquer sur
+   **Se connecter**.
+3. Saisir l'**adresse e-mail** et le **mot de passe** du compte.
+4. Cliquer sur **Se connecter**.
+5. En cas d'erreur, un message rouge s'affiche sous le formulaire ; les jetons
    expirés renvoient automatiquement vers la page de connexion.
 
 > Comptes fournis par l'administrateur. Rôles possibles : **SUPERADMIN**,
@@ -43,11 +45,12 @@ Ce guide explique, étape par étape, comment utiliser chaque partie de l'applic
 
 ---
 
-## 3. Tableau de bord (Pilotage)
+## 3. Accueil et tableau de bord (Pilotage)
 
-1. Cliquer sur **Tableau de bord**.
-2. Consulter les indicateurs clés et les graphiques.
-3. Changer la période pour recalculer les chiffres.
+1. **Accueil** : page de présentation de la FCE et de ses services (billetterie,
+   fret, locations, documents, statistiques). Également visible avant connexion.
+2. **Tableau de bord** : cliquer dessus, consulter les indicateurs clés et les
+   graphiques, puis changer la période pour recalculer les chiffres.
 
 ---
 

@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import AppLayout from '@/components/layout/AppLayout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { AuthProvider } from '@/context/AuthContext'
+import Accueil from '@/pages/Accueil'
 import Dashboard from '@/pages/Dashboard'
 import Aide from '@/pages/Aide'
 import Gares from '@/pages/Gares'
@@ -33,6 +34,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Accueil publique />} />
 
           <Route
             element={
@@ -41,7 +43,8 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Dashboard />} />
+            <Route path="accueil" element={<Accueil />} />
+            <Route path="tableau-de-bord" element={<Dashboard />} />
             <Route path="aide" element={<Aide />} />
             <Route path="gares" element={<Gares />} />
             <Route path="arrets" element={<Arrets />} />

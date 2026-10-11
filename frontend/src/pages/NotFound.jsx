@@ -19,7 +19,7 @@ export default function NotFound() {
         </CardHeader>
         <CardContent>
           <Button asChild>
-            <Link to="/">Retour au tableau de bord</Link>
+            <Link to="/tableau-de-bord">Retour au tableau de bord</Link>
           </Button>
         </CardContent>
       </Card>

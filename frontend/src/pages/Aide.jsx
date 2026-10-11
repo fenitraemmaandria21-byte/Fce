@@ -1,6 +1,7 @@
 import {
   BarChart3,
   FileText,
+  Home,
   LifeBuoy,
   LogIn,
   MessageSquare,
@@ -29,13 +30,13 @@ const ETAPES = [
     icon: LogIn,
     titre: '1. Se connecter',
     texte:
-      'Ouvrez l’application, saisissez votre e-mail et votre mot de passe, puis cliquez sur Se connecter.',
+      'La page d’accueil présente la FCE et ses services. Cliquez sur Se connecter, saisissez votre e-mail et votre mot de passe, puis validez.',
   },
   {
     icon: MousePointerClick,
     titre: '2. Naviguer',
     texte:
-      'Utilisez la barre latérale : Pilotage, Exploitation, Communication, Administration. Le bouton ☰ replie le menu.',
+      'Utilisez la barre latérale : Pilotage (Accueil, Tableau de bord), Exploitation, Communication, Administration. Le bouton ☰ replie le menu.',
   },
   {
     icon: Ticket,
@@ -52,6 +53,15 @@ const ETAPES = [
 ]
 
 const SECTIONS = [
+  {
+    icon: Home,
+    titre: 'Accueil et tableau de bord',
+    points: [
+      'Pilotage → Accueil : page de présentation de la FCE et de ses services.',
+      'Pilotage → Tableau de bord : synthèse de l’activité, alertes et raccourcis.',
+      'La page d’accueil est aussi visible avant connexion, avec un bouton Se connecter.',
+    ],
+  },
   {
     icon: Ticket,
     titre: 'Vendre un billet',

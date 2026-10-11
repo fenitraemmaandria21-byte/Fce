@@ -19,7 +19,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { useAuth } from '@/context/AuthContext'
 
 const LIBELLES_PAGES = {
-  '/': 'Tableau de bord',
+  '/accueil': 'Accueil',
+  '/tableau-de-bord': 'Tableau de bord',
   '/statistiques': 'Statistiques',
   '/gares': 'Gares',
   '/arrets': 'Arrêts',
@@ -43,21 +44,21 @@ const LIBELLES_PAGES = {
 function FilAriane() {
   const { pathname } = useLocation()
   const libelle = LIBELLES_PAGES[pathname] || 'Page introuvable'
-  const estAccueil = pathname === '/'
+  const estRacine = pathname === '/tableau-de-bord' || pathname === '/accueil'
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          {estAccueil ? (
-            <BreadcrumbPage>Tableau de bord</BreadcrumbPage>
+          {estRacine ? (
+            <BreadcrumbPage>{libelle}</BreadcrumbPage>
           ) : (
             <BreadcrumbLink asChild>
-              <Link to="/">Tableau de bord</Link>
+              <Link to="/tableau-de-bord">Tableau de bord</Link>
             </BreadcrumbLink>
           )}
         </BreadcrumbItem>
-        {!estAccueil && (
+        {!estRacine && (
           <Fragment>
             <BreadcrumbSeparator />
             <BreadcrumbItem>

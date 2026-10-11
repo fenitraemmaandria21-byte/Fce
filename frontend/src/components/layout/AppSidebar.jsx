@@ -1,4 +1,5 @@
 import {
+  Home,
   LayoutDashboard,
   LifeBuoy,
   LogOut,
@@ -43,7 +44,10 @@ import api from '@/services/api'
 const MENU = [
   {
     label: 'Pilotage',
-    items: [{ titre: 'Tableau de bord', url: '/', icon: LayoutDashboard }],
+    items: [
+      { titre: 'Accueil', url: '/accueil', icon: Home, end: true },
+      { titre: 'Tableau de bord', url: '/tableau-de-bord', icon: LayoutDashboard, end: true },
+    ],
   },
   {
     label: 'Exploitation',
@@ -136,7 +140,7 @@ export default function AppSidebar() {
                       <SidebarMenuButton asChild tooltip={item.titre}>
                         <NavLink
                           to={item.url}
-                          end={item.url === '/'}
+                          end={item.end || item.url === '/'}
                           className={({ isActive }) => (isActive ? 'bg-sidebar-accent' : undefined)}
                         >
                           <item.icon />

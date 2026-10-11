@@ -27,7 +27,7 @@ export function Interdit() {
         </CardHeader>
         <CardContent>
           <Button asChild>
-            <a href="/">Retour au tableau de bord</a>
+            <a href="/tableau-de-bord">Retour au tableau de bord</a>
           </Button>
         </CardContent>
       </Card>
