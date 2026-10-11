@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Download,
@@ -72,6 +73,7 @@ function titreConversation(conversation, moiId) {
 export default function Messagerie() {
   const { utilisateur } = useAuth()
   const moiId = utilisateur?.id
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [conversations, setConversations] = useState([])
   const [chargementListe, setChargementListe] = useState(true)
@@ -96,6 +98,7 @@ export default function Messagerie() {
 
   const finFilRef = useRef(null)
   const activeIdRef = useRef(null)
+  const ouvertureUrlRef = useRef(null)
 
   const chargerConversations = useCallback(async () => {
     try {
@@ -155,6 +158,16 @@ export default function Messagerie() {
       finFilRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
     }
   }, [fil?.messages?.length, activeId])
+
+  // Ouverture d'une conversation depuis un lien (ex. notification).
+  useEffect(() => {
+    const idUrl = searchParams.get('conversation')
+    if (idUrl && idUrl !== ouvertureUrlRef.current) {
+      ouvertureUrlRef.current = idUrl
+      ouvrirConversation(idUrl)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams, ouvrirConversation])
 
   const conversationsFiltrees = useMemo(() => {
     const terme = recherche.trim().toLowerCase()

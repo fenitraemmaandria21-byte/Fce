@@ -1,4 +1,5 @@
 import {
+  History,
   Home,
   LayoutDashboard,
   LifeBuoy,
@@ -72,6 +73,7 @@ const MENU = [
         roles: ['SUPERADMIN', 'ADMIN'],
       },
       { titre: 'Clients', url: '/clients', icon: User },
+      { titre: 'Journal', url: '/journal', icon: History, roles: ['SUPERADMIN', 'ADMIN'] },
       { titre: 'Paramètres', url: '/parametres', icon: Settings, roles: ['SUPERADMIN'] },
     ],
   },

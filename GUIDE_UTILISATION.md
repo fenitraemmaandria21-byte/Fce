@@ -33,8 +33,8 @@ Ce guide explique, étape par étape, comment utiliser chaque partie de l'applic
 - **Barre latérale (gauche)** : navigation groupée — *Pilotage*,
   *Exploitation*, *Communication*, *Administration*, *Assistance*. Utiliser le bouton **☰** (en haut
   à gauche) pour la replier/déplier : le logo s'adapte automatiquement.
-- **En-tête** : fil d'Ariane (emplacement) + bouton **?** (aide) + rôle de
-  l'utilisateur connecté.
+- **En-tête** : fil d'Ariane (emplacement) + **cloche de notifications** +
+  bouton **?** (aide) + rôle de l'utilisateur connecté.
 - **Menu utilisateur** (en bas de la barre latérale) : e-mail, rôle et
   **Se déconnecter**.
 - **Listes** : chaque page dispose d'un **filtre**, d'un bouton **Carte/Tableau**
@@ -147,7 +147,8 @@ Menu **Administration** :
 
 1. **Utilisateurs** : créer un compte, définir son rôle, activer/désactiver.
 2. **Clients** : créer et gérer la fiche client (nom, contact, adresse).
-3. **Paramètres** (SUPERADMIN) : capacités, règles et tarifs d'exploitation.
+3. **Journal** (ADMIN/SUPERADMIN) : consulter l'historique des connexions et opérations.
+4. **Paramètres** (SUPERADMIN) : capacités, règles et tarifs d'exploitation.
 
 ---
 
@@ -175,7 +176,20 @@ Dans une conversation :
 
 ---
 
-## 12. Statistiques
+## 12. Notifications et journal d'activité
+
+- **Cloche (en-tête)** : regroupe les **messages** non lus, les **arrivages**
+  récents, les **validations de location en attente** (ADMIN/SUPERADMIN) et
+  l'**activité** récente du journal. Le nombre sur la cloche indique les
+  notifications nouvelles ; l'ouvrir les marque comme lues.
+- Cliquer sur une notification ouvre l'écran correspondant (messagerie,
+  locations, arrivages, journal).
+- **Administration → Journal** (ADMIN/SUPERADMIN) : historique complet des
+  connexions et des opérations, avec recherche par action, entité ou utilisateur.
+
+---
+
+## 13. Statistiques
 
 1. Ouvrir **Statistiques** (accessible depuis la barre latérale).
 2. Filtrer par période et par type d'activité.
@@ -183,18 +197,18 @@ Dans une conversation :
 
 ---
 
-## 13. Astuces et bonnes pratiques
+## 14. Astuces et bonnes pratiques
 
 - Toujours **rafraîchir** après une saisie si la liste semble figée.
-- Les messages (notifications en haut à droite) disparaissent tout seuls ;
-  survoler les met en pause.
+- Les messages (notifications *toast* en haut à droite) disparaissent tout seuls ;
+  survoler les met en pause. La **cloche** de l'en-tête, elle, reste consultable.
 - Ne jamais inventer une donnée métier (gare, tarif, capacité) : les valeurs non
   confirmées sont marquées **À valider**.
 - Se déconnecter via le menu utilisateur en quittant un poste partagé.
 
 ---
 
-## 14. Dépannage rapide
+## 15. Dépannage rapide
 
 | Symptôme | Piste |
 |---|---|

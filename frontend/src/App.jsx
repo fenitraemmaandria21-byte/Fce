@@ -9,6 +9,7 @@ import Accueil from '@/pages/Accueil'
 import Dashboard from '@/pages/Dashboard'
 import Aide from '@/pages/Aide'
 import Gares from '@/pages/Gares'
+import Journal from '@/pages/Journal'
 import Login from '@/pages/Login'
 import NotFound from '@/pages/NotFound'
 import Arrets from '@/pages/Arrets'
@@ -82,6 +83,14 @@ export default function App() {
             />
             <Route path="clients" element={<Clients />} />
             <Route path="messagerie" element={<Messagerie />} />
+            <Route
+              path="journal"
+              element={
+                <ProtectedRoute roles={['SUPERADMIN', 'ADMIN']}>
+                  <Journal />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="parametres"
               element={

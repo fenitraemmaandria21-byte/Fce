@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { LifeBuoy } from 'lucide-react'
 
 import AppSidebar from '@/components/layout/AppSidebar'
+import NotificationsBell from '@/components/NotificationsBell'
 import { BadgeRole } from '@/lib/affichage'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,6 +38,7 @@ const LIBELLES_PAGES = {
   '/utilisateurs': 'Utilisateurs',
   '/clients': 'Clients',
   '/messagerie': 'Messagerie',
+  '/journal': 'Journal',
   '/parametres': 'Paramètres',
   '/aide': 'Comment utiliser ?',
 }
@@ -85,6 +87,7 @@ export default function AppLayout() {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <FilAriane />
             <div className="ml-auto flex items-center gap-2">
+              <NotificationsBell />
               <Button asChild variant="ghost" size="icon" title="Comment utiliser ?">
                 <Link to="/aide" aria-label="Comment utiliser l’application">
                   <LifeBuoy />

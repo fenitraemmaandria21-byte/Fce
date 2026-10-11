@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Bell,
   FileText,
   Home,
   LifeBuoy,
@@ -117,6 +118,7 @@ const SECTIONS = [
     points: [
       'Administration → Utilisateurs : créer un compte, définir le rôle, activer/désactiver.',
       'Administration → Clients : créer, consulter, modifier ou supprimer une fiche client.',
+      'Administration → Journal : historique des connexions et opérations (ADMIN/SUPERADMIN).',
       'Administration → Paramètres : réservé au SUPERADMIN.',
     ],
   },
@@ -129,6 +131,16 @@ const SECTIONS = [
       'Joignez des fichiers (images, PDF, Word/Excel, texte — 10 Mo max, 5 par message).',
       'Le badge du menu indique les messages non lus.',
       'Vous pouvez supprimer vos propres messages, vider une conversation ou la quitter.',
+    ],
+  },
+  {
+    icon: Bell,
+    titre: 'Notifications et journal',
+    points: [
+      'La cloche de l’en-tête regroupe les messages, arrivages, validations en attente et l’activité récente.',
+      'Le nombre affiché indique les notifications nouvelles ; ouvrir la cloche les marque comme lues.',
+      'Cliquer sur une notification ouvre l’écran correspondant.',
+      'Administration → Journal : historique complet des connexions et opérations (ADMIN/SUPERADMIN).',
     ],
   },
 ]
