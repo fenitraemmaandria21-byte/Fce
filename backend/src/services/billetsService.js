@@ -4,6 +4,7 @@ const { dbCall } = require('../utils/db');
 const { actif } = require('../utils/filtres');
 const { parsePagination, paginated } = require('../utils/pagination');
 const { journaliser } = require('../utils/journal');
+const notificationsService = require('./notificationsService');
 
 // ------------------------------------------------------------
 // BILLETTERIE
@@ -137,6 +138,18 @@ async function creer(donnees, appelant) {
       entite: 'Billet',
       entiteId: billet.id,
       details: { classe: billet.classe, tarif: billet.tarif, destination: gare.code },
+    });
+
+    // Notification automatique après la réussite de la vente (supervision + agent).
+    const admins = await notificationsService.destinatairesParRole(['ADMIN', 'SUPERADMIN']);
+    await notificationsService.creerNotifications({
+      destinataires: [...admins, appelant.id],
+      type: 'BILLET',
+      message: `Billet n°${billet.numero} — ${gare.nom || gare.code}`,
+      entite: 'Billet',
+      entiteId: billet.id,
+      lien: '/billets',
+      acteurId: appelant.id,
     });
 
     return prisma.billet.findUnique({

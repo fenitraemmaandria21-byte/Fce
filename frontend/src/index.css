@@ -206,6 +206,18 @@ body {
   background: var(--color-fce-600);
 }
 
+/* SweetAlert2 ouvert depuis une modale Radix : Radix passe le <body> en
+   pointer-events: none et peut marquer le conteneur d'alerte aria-hidden
+   (ce que SweetAlert masque alors). On rétablit affichage et clic au premier plan. */
+body.swal2-shown > .swal2-container {
+  pointer-events: auto;
+  z-index: 2000;
+}
+
+body.swal2-shown > .swal2-container[aria-hidden='true'] {
+  display: grid !important;
+}
+
 /* SweetAlert2 — harmonisation avec la charte FCE (souris/cartes shadcn) */
 .swal2-container .swal2-popup {
   font-family: var(--font-sans);

@@ -4,6 +4,7 @@ const { dbCall } = require('../utils/db');
 const { actif } = require('../utils/filtres');
 const { parsePagination, paginated } = require('../utils/pagination');
 const { journaliser } = require('../utils/journal');
+const notificationsService = require('./notificationsService');
 
 // ------------------------------------------------------------
 // ARRIVAGES — réception des marchandises.
@@ -16,16 +17,20 @@ async function creer(donnees, appelant) {
   return dbCall(async () => {
     const prisma = getPrisma();
 
-    const envoi = await prisma.envoi.findUnique({ where: { id: donnees.envoiId } });
+    const envoi = await prisma.envoi.findUnique({
+      where: { id: donnees.envoiId },
+      include: { gareDestination: { select: { code: true, nom: true } } },
+    });
     if (!envoi) throw new ApiError(404, 'ENVOI_INTROUVE', 'Envoi introuvable');
 
     if (donnees.trainId) {
       const train = await prisma.train.findUnique({ where: { id: donnees.trainId } });
       if (!train) throw new ApiError(404, 'TRAIN_INTROUVE', 'Train introuvable');
     }
+    let gareArrivage = null;
     if (donnees.gareId) {
-      const gare = await prisma.gare.findUnique({ where: { id: donnees.gareId } });
-      if (!gare) throw new ApiError(404, 'GARE_INTROUVE', 'Gare introuvable');
+      gareArrivage = await prisma.gare.findUnique({ where: { id: donnees.gareId } });
+      if (!gareArrivage) throw new ApiError(404, 'GARE_INTROUVE', 'Gare introuvable');
     }
 
     const arrivage = await prisma.$transaction(async (tx) => {
@@ -57,6 +62,24 @@ async function creer(donnees, appelant) {
       entite: 'Arrivage',
       entiteId: arrivage.id,
       details: { statut: arrivage.statut },
+    });
+
+    // Notification automatique après l'enregistrement de l'arrivage.
+    const gareLabel =
+      (gareArrivage && (gareArrivage.nom || gareArrivage.code)) ||
+      (envoi.gareDestination && (envoi.gareDestination.nom || envoi.gareDestination.code)) ||
+      '—';
+    const admins = await notificationsService.destinatairesParRole(['ADMIN', 'SUPERADMIN']);
+    await notificationsService.creerNotifications({
+      destinataires: [...admins, appelant.id, envoi.creeParId],
+      type: 'ARRIVAGE',
+      message: `Envoi ${
+        envoi.reference || envoi.destinataireNom
+      } — Gare de destination : ${gareLabel}`,
+      entite: 'Arrivage',
+      entiteId: arrivage.id,
+      lien: '/arrivages',
+      acteurId: appelant.id,
     });
 
     return recupererInterne(arrivage.id);

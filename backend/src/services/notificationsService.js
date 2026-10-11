@@ -1,64 +1,28 @@
 const { getPrisma } = require('../config/database');
+const { ApiError } = require('../utils/ApiError');
 const { dbCall } = require('../utils/db');
 
-// Nombre maximum de notifications renvoyées, et volume par source.
+// ------------------------------------------------------------
+// NOTIFICATIONS PERSISTANTES
+// Une ligne par destinataire. Les notifications sont créées après la
+// réussite d'une opération métier (billet, envoi, arrivage, location,
+// message). Le compteur de non-lus est calculé par utilisateur depuis
+// la base de données — jamais depuis le localStorage.
+// ------------------------------------------------------------
+
+// Nombre maximum de notifications renvoyées au client.
 const LIMITE_GLOBALE = 40;
-const LIMITE_PAR_SOURCE = 12;
 
-// Libellés lisibles pour les actions du journal d'activité.
-const LABELS_ACTION = {
-  CONNEXION: 'Connexion',
-  AMORCAGE_SUPERADMIN: 'Amorçage superadministrateur',
-  CREATION_BILLET: 'Création d’un billet',
-  MODIFICATION_BILLET: 'Modification d’un billet',
-  ANNULATION_BILLET: 'Annulation d’un billet',
-  SUPPRESSION_BILLET: 'Suppression d’un billet',
-  CREATION_ENVOI: 'Création d’un envoi',
-  MODIFICATION_ENVOI: 'Modification d’un envoi',
-  SUPPRESSION_ENVOI: 'Suppression d’un envoi',
-  CREATION_ARRIVAGE: 'Création d’un arrivage',
-  MODIFICATION_ARRIVAGE: 'Modification d’un arrivage',
-  SUPPRESSION_ARRIVAGE: 'Suppression d’un arrivage',
-  CREATION_LOCATION: 'Création d’une location',
-  MODIFICATION_LOCATION: 'Modification d’une location',
-  VALIDATION_LOCATION: 'Validation d’une location',
-  REFUS_LOCATION: 'Refus d’une location',
-  SUPPRESSION_LOCATION: 'Suppression d’une location',
-  CREATION_CLIENT: 'Création d’un client',
-  MODIFICATION_CLIENT: 'Modification d’un client',
-  SUPPRESSION_CLIENT: 'Suppression d’un client',
-  CREATION_UTILISATEUR: 'Création d’un utilisateur',
-  MODIFICATION_UTILISATEUR: 'Modification d’un utilisateur',
-  CREATION_BRAN: 'Création d’un BRAN',
-  CREATION_RFE: 'Création d’un RFE',
-  CREATION_PARAMETRE: 'Création d’un paramètre',
-  MODIFICATION_PARAMETRE: 'Modification d’un paramètre',
-  SUPPRESSION_PARAMETRE: 'Suppression d’un paramètre',
-  MODIFICATION_GARE: 'Modification d’une gare',
-  SUPPRESSION_GARE: 'Suppression d’une gare',
-  MODIFICATION_ARRET: 'Modification d’un arrêt',
-  SUPPRESSION_ARRET: 'Suppression d’un arrêt',
-  MODIFICATION_TARIF: 'Modification d’un tarif',
-  SUPPRESSION_TARIF: 'Suppression d’un tarif',
-  CREATION_TRAIN: 'Création d’un train',
-  MODIFICATION_TRAIN: 'Modification d’un train',
-  SUPPRESSION_TRAIN: 'Suppression d’un train',
-  MODIFICATION_VOITURE: 'Modification d’une voiture',
-  SUPPRESSION_VOITURE: 'Suppression d’une voiture',
-  MODIFICATION_WAGON: 'Modification d’un wagon',
-  SUPPRESSION_WAGON: 'Suppression d’un wagon',
+// Titres lisibles par type de notification.
+const TITRES = {
+  BILLET: 'Nouveau billet vendu',
+  ENVOI: 'Nouvel envoi de marchandise',
+  ARRIVAGE: 'Nouvel arrivage enregistré',
+  LOCATION_DEMANDE: 'Nouvelle demande de location',
+  LOCATION_VALIDEE: 'Demande de location validée',
+  LOCATION_REFUSEE: 'Demande de location refusée',
+  MESSAGE: 'Nouveau message',
 };
-
-const LABELS_TYPE_LOCATION = {
-  DRAISINE: 'Draisine',
-  MACHINE: 'Machine',
-  BATIMENT: 'Bâtiment',
-  TERRAIN: 'Terrain',
-};
-
-function estAdmin(appelant) {
-  return appelant.role === 'ADMIN' || appelant.role === 'SUPERADMIN';
-}
 
 function tronquer(texte, longueur = 90) {
   const t = (texte || '').replace(/\s+/g, ' ').trim();
@@ -66,125 +30,143 @@ function tronquer(texte, longueur = 90) {
   return t.length > longueur ? `${t.slice(0, longueur - 1)}…` : t;
 }
 
-// Messages non lus : une notification par conversation concernée.
-async function notificationsMessages(prisma, moi) {
-  const participations = await prisma.conversationParticipant.findMany({
-    where: { utilisateurId: moi },
-    include: { conversation: { select: { id: true, sujet: true } } },
+// Identifiants des utilisateurs actifs possédant l'un des rôles donnés.
+// Sert à cibler les notifications (jamais de diffusion à tous).
+async function destinatairesParRole(roles) {
+  const prisma = getPrisma();
+  const utilisateurs = await prisma.user.findMany({
+    where: { actif: true, role: { in: roles } },
+    select: { id: true },
   });
-
-  const resultats = await Promise.all(
-    participations.map(async (p) => {
-      const bornes = [p.dernierLuAt, p.effaceJusqua]
-        .filter(Boolean)
-        .map((d) => new Date(d).getTime());
-      const seuil = bornes.length ? new Date(Math.max(...bornes)) : null;
-
-      const dernier = await prisma.message.findFirst({
-        where: {
-          conversationId: p.conversationId,
-          expediteurId: { not: moi },
-          ...(seuil ? { createdAt: { gt: seuil } } : {}),
-        },
-        orderBy: { createdAt: 'desc' },
-        include: { expediteur: { select: { nom: true } } },
-      });
-      if (!dernier) return null;
-
-      const expediteur = dernier.expediteur?.nom || 'Utilisateur';
-      const sujet = p.conversation.sujet;
-      return {
-        id: `message:${p.conversationId}:${dernier.id}`,
-        type: 'MESSAGE',
-        titre: sujet ? `Message — ${sujet}` : `Message de ${expediteur}`,
-        message: tronquer(dernier.contenu) || 'Pièce jointe',
-        lien: `/messagerie?conversation=${p.conversationId}`,
-        date: dernier.createdAt,
-      };
-    })
-  );
-
-  return resultats.filter(Boolean);
+  return utilisateurs.map((u) => u.id);
 }
 
-// Locations en attente de validation (ADMIN / SUPERADMIN).
-async function notificationsValidations(prisma) {
-  const locations = await prisma.location.findMany({
-    where: { statut: 'EN_ATTENTE' },
-    orderBy: { createdAt: 'desc' },
-    take: LIMITE_PAR_SOURCE,
-    include: { client: { select: { nom: true } } },
-  });
+// Création best-effort et idempotente des notifications.
+// - Ne lève jamais d'erreur : un échec de notification ne doit pas faire
+//   échouer l'opération métier déjà validée en base.
+// - Idempotente grâce à la contrainte d'unicité sur "cle" (skipDuplicates) :
+//   une requête répétée ne crée pas de doublon.
+async function creerNotifications({
+  destinataires,
+  type,
+  message,
+  entite = null,
+  entiteId = null,
+  lien = null,
+  acteurId = null,
+}) {
+  const ids = [...new Set((destinataires || []).filter(Boolean))];
+  if (ids.length === 0) return { creees: 0 };
 
-  return locations.map((l) => ({
-    id: `location:${l.id}`,
-    type: 'VALIDATION',
-    titre: 'Location à valider',
-    message: `${l.client?.nom || 'Client'} — ${LABELS_TYPE_LOCATION[l.type] || l.type}`,
-    lien: '/locations',
-    date: l.createdAt,
-  }));
+  try {
+    const prisma = getPrisma();
+    const data = ids.map((utilisateurId) => ({
+      utilisateurId,
+      type,
+      message,
+      entite,
+      entiteId: entiteId ? String(entiteId) : null,
+      lien,
+      acteurId: acteurId || null,
+      cle: `${utilisateurId}:${type}:${entiteId != null ? entiteId : ''}`,
+    }));
+    const resultat = await prisma.notification.createMany({ data, skipDuplicates: true });
+    return { creees: resultat.count };
+  } catch (err) {
+    console.warn('[FCE-SI][NOTIFICATIONS] création impossible :', err.message);
+    return { creees: 0 };
+  }
 }
 
-// Arrivages récents.
-async function notificationsArrivages(prisma) {
-  const arrivages = await prisma.arrivage.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: LIMITE_PAR_SOURCE,
-    include: { envoi: { select: { reference: true, destinataireNom: true } } },
-  });
-
-  return arrivages.map((a) => ({
-    id: `arrivage:${a.id}`,
-    type: 'ARRIVAGE',
-    titre: 'Nouvel arrivage',
-    message: `Envoi ${a.envoi?.reference || a.envoi?.destinataireNom || '—'}`,
-    lien: '/arrivages',
-    date: a.createdAt,
-  }));
-}
-
-// Activité récente du journal (hors connexions et messages, déjà couverts).
-async function notificationsJournal(prisma, moi) {
-  const entrees = await prisma.journalActivite.findMany({
-    where: {
-      utilisateurId: { not: moi },
-      action: { notIn: ['CONNEXION', 'ENVOI_MESSAGE', 'AMORCAGE_SUPERADMIN'] },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: LIMITE_PAR_SOURCE,
-    include: { utilisateur: { select: { nom: true } } },
-  });
-
-  return entrees.map((e) => ({
-    id: `journal:${e.id}`,
-    type: 'ACTIVITE',
-    titre: LABELS_ACTION[e.action] || e.action,
-    message: `${e.utilisateur?.nom || 'Système'} — ${e.entite}`,
-    lien: '/journal',
-    date: e.createdAt,
-  }));
-}
-
-// GET /api/notifications — flux unifié, trié du plus récent au plus ancien.
+// GET /api/notifications — notifications de l'appelant + compteur non lus.
 async function lister(appelant) {
   return dbCall(async () => {
     const prisma = getPrisma();
-    const sources = [
-      notificationsMessages(prisma, appelant.id),
-      notificationsArrivages(prisma),
-    ];
-    if (estAdmin(appelant)) {
-      sources.push(notificationsValidations(prisma));
-      sources.push(notificationsJournal(prisma, appelant.id));
-    }
+    const [lignes, nonLues] = await Promise.all([
+      prisma.notification.findMany({
+        where: { utilisateurId: appelant.id },
+        orderBy: { createdAt: 'desc' },
+        take: LIMITE_GLOBALE,
+        include: { acteur: { select: { nom: true } } },
+      }),
+      prisma.notification.count({ where: { utilisateurId: appelant.id, lu: false } }),
+    ]);
 
-    const listes = await Promise.all(sources);
-    return listes
-      .flat()
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, LIMITE_GLOBALE);
+    return {
+      nonLues,
+      donnees: lignes.map((n) => ({
+        id: n.id,
+        type: n.type,
+        titre: TITRES[n.type] || 'Notification',
+        message: n.message,
+        entite: n.entite,
+        entiteId: n.entiteId,
+        lien: n.lien,
+        lu: n.lu,
+        acteurNom: n.acteur ? n.acteur.nom : null,
+        date: n.createdAt,
+      })),
+    };
   });
 }
 
-module.exports = { lister };
+// POST /api/notifications/:id/lu — marque une notification comme lue.
+// Un utilisateur ne peut lire que ses propres notifications : toute autre
+// notification est traitée comme introuvable (aucune fuite d'information).
+async function marquerLue(id, appelant) {
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const notification = await prisma.notification.findUnique({ where: { id } });
+    if (!notification || notification.utilisateurId !== appelant.id) {
+      throw new ApiError(404, 'NOTIFICATION_INTROUVABLE', 'Notification introuvable');
+    }
+    if (!notification.lu) {
+      await prisma.notification.update({ where: { id }, data: { lu: true } });
+    }
+    const nonLues = await prisma.notification.count({
+      where: { utilisateurId: appelant.id, lu: false },
+    });
+    return { nonLues };
+  });
+}
+
+// POST /api/notifications/tout-lu — marque toutes les notifications comme lues.
+async function toutMarquerLues(appelant) {
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    await prisma.notification.updateMany({
+      where: { utilisateurId: appelant.id, lu: false },
+      data: { lu: true },
+    });
+    return { nonLues: 0 };
+  });
+}
+
+// Marque comme lues les notifications d'un utilisateur pointant vers un lien.
+// Utilisé par la messagerie (ouverture / vidage d'une conversation).
+// Best-effort : ne fait jamais échouer l'appelant.
+async function marquerLuesParLien(utilisateurId, lien) {
+  if (!utilisateurId || !lien) return { maj: 0 };
+  try {
+    const prisma = getPrisma();
+    const resultat = await prisma.notification.updateMany({
+      where: { utilisateurId, lien, lu: false },
+      data: { lu: true },
+    });
+    return { maj: resultat.count };
+  } catch (err) {
+    console.warn('[FCE-SI][NOTIFICATIONS] marquage impossible :', err.message);
+    return { maj: 0 };
+  }
+}
+
+module.exports = {
+  TITRES,
+  tronquer,
+  destinatairesParRole,
+  creerNotifications,
+  lister,
+  marquerLue,
+  toutMarquerLues,
+  marquerLuesParLien,
+};

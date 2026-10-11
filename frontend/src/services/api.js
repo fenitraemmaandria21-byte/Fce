@@ -15,8 +15,21 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Événement émis après toute mutation réussie : permet au centre de
+// notifications de rafraîchir immédiatement son compteur, sans rechargement.
+export const EVENEMENT_NOTIFICATIONS = 'fce:notifications-rafraichir'
+
 api.interceptors.response.use(
-  (reponse) => reponse,
+  (reponse) => {
+    const methode = (reponse.config?.method || '').toLowerCase()
+    if (
+      ['post', 'put', 'patch', 'delete'].includes(methode) &&
+      typeof window !== 'undefined'
+    ) {
+      window.dispatchEvent(new Event(EVENEMENT_NOTIFICATIONS))
+    }
+    return reponse
+  },
   (erreur) => {
     if (erreur.response?.status === 401) {
       localStorage.removeItem(CLE_TOKEN)

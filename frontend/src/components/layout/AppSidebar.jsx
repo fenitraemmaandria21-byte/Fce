@@ -10,8 +10,8 @@ import {
   Settings,
   Ticket,
   Truck,
-  User,
   Users,
+  Wallet,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
@@ -48,6 +48,7 @@ const MENU = [
     items: [
       { titre: 'Accueil', url: '/accueil', icon: Home, end: true },
       { titre: 'Tableau de bord', url: '/tableau-de-bord', icon: LayoutDashboard, end: true },
+      { titre: 'Caisse', url: '/caisse', icon: Wallet },
     ],
   },
   {
@@ -72,7 +73,6 @@ const MENU = [
         icon: Users,
         roles: ['SUPERADMIN', 'ADMIN'],
       },
-      { titre: 'Clients', url: '/clients', icon: User },
       { titre: 'Journal', url: '/journal', icon: History, roles: ['SUPERADMIN', 'ADMIN'] },
       { titre: 'Paramètres', url: '/parametres', icon: Settings, roles: ['SUPERADMIN'] },
     ],

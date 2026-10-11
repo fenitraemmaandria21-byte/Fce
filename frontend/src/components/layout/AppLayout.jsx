@@ -36,7 +36,7 @@ const LIBELLES_PAGES = {
   '/bran': 'BRAN',
   '/rfe': 'RFE',
   '/utilisateurs': 'Utilisateurs',
-  '/clients': 'Clients',
+  '/caisse': 'Caisse',
   '/messagerie': 'Messagerie',
   '/journal': 'Journal',
   '/parametres': 'Paramètres',

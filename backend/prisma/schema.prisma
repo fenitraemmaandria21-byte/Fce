@@ -85,6 +85,12 @@ enum StatutArrivage {
   ANOMALIE
 }
 
+// Journal de caisse : une journée = une ligne. Ouverte puis clôturée.
+enum StatutCaisse {
+  OUVERTE
+  CLOTUREE
+}
+
 // ------------------------------------------------------------
 // RÉFÉRENTIELS FCE
 // ------------------------------------------------------------
@@ -262,6 +268,12 @@ model User {
   conversationsCreees Conversation[]             @relation("ConversationCreePar")
   conversations        ConversationParticipant[]  @relation("ConversationParticipant")
   messagesEnvoyes      Message[]                  @relation("MessageExpediteur")
+
+  notifications        Notification[] @relation("NotificationDestinataire")
+  notificationsEmises  Notification[] @relation("NotificationActeur")
+
+  caissesOuvertes    CaisseJour[] @relation("CaisseOuvertePar")
+  caissesCloturees   CaisseJour[] @relation("CaisseCloturePar")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -523,6 +535,47 @@ model Rfe {
 }
 
 // ------------------------------------------------------------
+// CAISSE / RECETTES JOURNALIÈRES
+// Une ligne par journée d'exploitation (date "YYYY-MM-DD").
+// "theorique*" = recettes attendues calculées depuis les données réelles :
+//   - Billetterie  : billets VENDU (Billet.tarif), par date de vente (createdAt)
+//   - Locations    : locations VALIDEE (Location.montant), par createdAt
+//   - Marchandises : BRAN (Bran.montantTotal), par dateBran
+// REGLE_A_CONFIRMER : périmètre exact du journal de caisse et mode de
+//   rapprochement (montant compté toutes recettes confondues) à valider
+//   par le responsable métier.
+// ------------------------------------------------------------
+
+model CaisseJour {
+  id   String @id @default(cuid())
+  date String @unique // "YYYY-MM-DD" (journée d'exploitation)
+
+  // Snapshot des recettes attendues (Ar).
+  theoriqueBilletterie  Int @default(0)
+  theoriqueLocations    Int @default(0)
+  theoriqueMarchandises Int @default(0)
+  theorique             Int @default(0) // somme des trois lignes
+
+  montantCompte Int? // montant réellement constaté/encaissé par l'exploitant
+  ecart         Int? // montantCompte - theorique
+
+  statut       StatutCaisse @default(OUVERTE)
+  observations String?
+
+  ouverteParId String
+  ouvertePar   User   @relation("CaisseOuvertePar", fields: [ouverteParId], references: [id])
+  clotureParId String?
+  cloturePar   User?  @relation("CaisseCloturePar", fields: [clotureParId], references: [id])
+  clotureLe    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@map("caisses")
+}
+
+// ------------------------------------------------------------
 // HISTORIQUE
 // ------------------------------------------------------------
 
@@ -610,4 +663,39 @@ model PieceJointe {
   createdAt DateTime @default(now())
 
   @@map("pieces_jointes")
+}
+
+// ------------------------------------------------------------
+// NOTIFICATIONS PERSISTANTES
+// Une ligne par destinataire. Créées après la réussite d'une
+// opération métier (billet, envoi, arrivage, location, message).
+// La colonne "cle" garantit l'idempotence (pas de doublon sur une
+// requête répétée). Le compteur de non-lus est calculé par utilisateur.
+// ------------------------------------------------------------
+
+model Notification {
+  id            String @id @default(cuid())
+  utilisateurId String
+  utilisateur   User   @relation("NotificationDestinataire", fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  // Type : BILLET | ENVOI | ARRIVAGE | LOCATION_DEMANDE | LOCATION_VALIDEE |
+  //        LOCATION_REFUSEE | MESSAGE (chaîne libre, extensible).
+  type    String
+  message String
+  entite  String? // entité concernée : Billet, Envoi, Arrivage, Location, Message
+  entiteId String? // identifiant de l'opération concernée
+  lien    String? // route frontend cible
+
+  acteurId String?
+  acteur   User?   @relation("NotificationActeur", fields: [acteurId], references: [id], onDelete: SetNull)
+
+  cle String @unique // utilisateurId:type:entiteId — idempotence
+
+  lu Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([utilisateurId, lu])
+  @@index([utilisateurId, createdAt])
+  @@map("notifications")
 }

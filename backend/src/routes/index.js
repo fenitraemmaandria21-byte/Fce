@@ -14,7 +14,7 @@ router.use('/', require('./referenceRoutes'));
 router.use('/billets', require('./billetsRoutes'));
 router.use('/', require('./marchandisesRoutes'));
 router.use('/locations', require('./locationsRoutes'));
-router.use('/clients', require('./clientsRoutes'));
+router.use('/caisse', require('./caisseRoutes'));
 router.use('/messagerie', require('./messagerieRoutes'));
 router.use('/notifications', require('./notificationsRoutes'));
 router.use('/journal', require('./journalRoutes'));

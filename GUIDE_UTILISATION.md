@@ -51,6 +51,8 @@ Ce guide explique, étape par étape, comment utiliser chaque partie de l'applic
    fret, locations, documents, statistiques). Également visible avant connexion.
 2. **Tableau de bord** : cliquer dessus, consulter les indicateurs clés et les
    graphiques, puis changer la période pour recalculer les chiffres.
+3. **Caisse** : suivre les recettes par journée et clôturer la caisse
+   (voir la section 10).
 
 ---
 
@@ -135,7 +137,26 @@ Les valeurs non confirmées apparaissent avec un badge **À valider**.
 
 ---
 
-## 10. Rôles et Administration
+## 10. Caisse et recettes (Pilotage)
+
+La page Caisse affiche les **recettes par journée d'exploitation**, calculées
+automatiquement à partir des données réelles.
+
+1. Ouvrir **Pilotage → Caisse** dans la barre latérale.
+2. Choisir la **période** (aujourd'hui, semaine, mois, année) : la liste et les
+   totaux se recalculent. Chaque jour montre la billetterie (billets vendus),
+   les locations validées et les marchandises (bordereaux BRAN).
+3. Sur une journée, cliquer sur **Comptage**, saisir le **montant réellement
+   constaté** pour obtenir l'**écart**, puis **Enregistrer** ou **Clôturer**.
+4. Une journée clôturée est définitive.
+
+- **Consultation** : tous les utilisateurs connectés.
+- **Comptage et clôture** : ADMIN et SUPERADMIN.
+- *Périmètre des recettes attendues à confirmer par le responsable métier.*
+
+---
+
+## 11. Rôles et Administration
 
 | Rôle | Droits principaux |
 |---|---|
@@ -146,13 +167,12 @@ Les valeurs non confirmées apparaissent avec un badge **À valider**.
 Menu **Administration** :
 
 1. **Utilisateurs** : créer un compte, définir son rôle, activer/désactiver.
-2. **Clients** : créer et gérer la fiche client (nom, contact, adresse).
-3. **Journal** (ADMIN/SUPERADMIN) : consulter l'historique des connexions et opérations.
-4. **Paramètres** (SUPERADMIN) : capacités, règles et tarifs d'exploitation.
+2. **Journal** (ADMIN/SUPERADMIN) : consulter l'historique des connexions et opérations.
+3. **Paramètres** (SUPERADMIN) : capacités, règles et tarifs d'exploitation.
 
 ---
 
-## 11. Messagerie interne
+## 12. Messagerie interne
 
 La messagerie permet aux utilisateurs de l'application de s'écrire entre eux.
 
@@ -176,20 +196,28 @@ Dans une conversation :
 
 ---
 
-## 12. Notifications et journal d'activité
+## 13. Notifications et journal d'activité
 
-- **Cloche (en-tête)** : regroupe les **messages** non lus, les **arrivages**
-  récents, les **validations de location en attente** (ADMIN/SUPERADMIN) et
-  l'**activité** récente du journal. Le nombre sur la cloche indique les
-  notifications nouvelles ; l'ouvrir les marque comme lues.
-- Cliquer sur une notification ouvre l'écran correspondant (messagerie,
-  locations, arrivages, journal).
+- **Cloche (en-tête)** : alimentée **automatiquement** après chaque opération —
+  **billet vendu**, **envoi de marchandise enregistré**, **arrivage enregistré**
+  (avec la gare de destination) et **demande de location** (création, puis
+  validation ou refus) — ainsi que les **nouveaux messages** de la messagerie.
+- Chaque notification précise l'opération, l'auteur et son ancienneté (par ex.
+  « Nouveau billet vendu — Billet n°FCE-2026-000123 »).
+- Le **compteur** affiche le nombre exact de notifications **non lues** (`99+`
+  au-delà de 99). Il se met à jour sans recharge, diminue quand une notification
+  est lue (clic) et revient à **zéro** via **« Tout lu »**.
+- Les notifications sont **personnelles** : chacun ne voit que les siennes, selon
+  son rôle (les agents reçoivent les notifications liées à leurs opérations, les
+  ADMIN/SUPERADMIN celles de supervision).
+- Cliquer sur une notification ouvre l'écran correspondant (billets, marchandises,
+  arrivages, locations, messagerie).
 - **Administration → Journal** (ADMIN/SUPERADMIN) : historique complet des
   connexions et des opérations, avec recherche par action, entité ou utilisateur.
 
 ---
 
-## 13. Statistiques
+## 14. Statistiques
 
 1. Ouvrir **Statistiques** (accessible depuis la barre latérale).
 2. Filtrer par période et par type d'activité.
@@ -197,7 +225,7 @@ Dans une conversation :
 
 ---
 
-## 14. Astuces et bonnes pratiques
+## 15. Astuces et bonnes pratiques
 
 - Toujours **rafraîchir** après une saisie si la liste semble figée.
 - Les messages (notifications *toast* en haut à droite) disparaissent tout seuls ;
@@ -208,7 +236,7 @@ Dans une conversation :
 
 ---
 
-## 15. Dépannage rapide
+## 16. Dépannage rapide
 
 | Symptôme | Piste |
 |---|---|

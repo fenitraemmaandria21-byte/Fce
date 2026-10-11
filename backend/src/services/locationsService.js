@@ -4,6 +4,15 @@ const { dbCall } = require('../utils/db');
 const { actif } = require('../utils/filtres');
 const { parsePagination, paginated } = require('../utils/pagination');
 const { journaliser } = require('../utils/journal');
+const notificationsService = require('./notificationsService');
+
+// Libellés lisibles des types de location (pour les notifications).
+const LABELS_TYPE_LOCATION = {
+  DRAISINE: 'Draisine',
+  MACHINE: 'Machine',
+  BATIMENT: 'Bâtiment',
+  TERRAIN: 'Terrain',
+};
 
 // ------------------------------------------------------------
 // LOCATION — draisine, micheline/machine, bâtiment, terrain.
@@ -32,7 +41,7 @@ async function lireCapacite(prisma, cle) {
 }
 
 async function resoudreTarifLocation(prisma, donnees) {
-  const { type, zoneId, formule, allerRetour, personnes, dateDebut, dateFin } = donnees;
+  const { type, zoneId, depart, formule, allerRetour, personnes, dateDebut, dateFin } = donnees;
 
   if (type === 'DRAISINE') {
     if (!zoneId) {
@@ -176,6 +185,20 @@ async function creer(donnees, appelant) {
       details: { type: location.type, montant: location.montant },
     });
 
+    // Notification automatique après la création de la demande de location.
+    const admins = await notificationsService.destinatairesParRole(['ADMIN', 'SUPERADMIN']);
+    await notificationsService.creerNotifications({
+      destinataires: [...admins, appelant.id],
+      type: 'LOCATION_DEMANDE',
+      message: `Demande de ${location.client?.nom || 'Client'} — ${
+        LABELS_TYPE_LOCATION[location.type] || location.type
+      }`,
+      entite: 'Location',
+      entiteId: location.id,
+      lien: '/locations',
+      acteurId: appelant.id,
+    });
+
     return location;
   });
 }
@@ -252,6 +275,20 @@ async function changerStatut(id, statut, motif, appelant) {
       entite: 'Location',
       entiteId: id,
       details: motif ? { motif } : undefined,
+    });
+
+    // Notification automatique après validation/refus, adressée à l'agent
+    // demandeur et au décideur (jamais de diffusion à tous).
+    const libelle = LABELS_TYPE_LOCATION[location.type] || location.type;
+    const base = `Location de ${location.client?.nom || 'Client'} — ${libelle}`;
+    await notificationsService.creerNotifications({
+      destinataires: [existant.creeParId, appelant.id],
+      type: statut === 'VALIDEE' ? 'LOCATION_VALIDEE' : 'LOCATION_REFUSEE',
+      message: statut === 'REFUSEE' && motif ? `${base} (motif : ${motif})` : base,
+      entite: 'Location',
+      entiteId: id,
+      lien: '/locations',
+      acteurId: appelant.id,
     });
 
     return location;

@@ -15,6 +15,7 @@ import {
   Ticket,
   Truck,
   Users,
+  Wallet,
 } from 'lucide-react'
 
 import {
@@ -114,12 +115,22 @@ const SECTIONS = [
   },
   {
     icon: Users,
-    titre: 'Utilisateurs et clients',
+    titre: 'Utilisateurs et administration',
     points: [
       'Administration → Utilisateurs : créer un compte, définir le rôle, activer/désactiver.',
-      'Administration → Clients : créer, consulter, modifier ou supprimer une fiche client.',
       'Administration → Journal : historique des connexions et opérations (ADMIN/SUPERADMIN).',
       'Administration → Paramètres : réservé au SUPERADMIN.',
+    ],
+  },
+  {
+    icon: Wallet,
+    titre: 'Caisse et recettes',
+    points: [
+      'Pilotage → Caisse : recettes par journée, calculées automatiquement sur la période choisie (aujourd’hui, semaine, mois, année).',
+      'Les recettes attendues regroupent la billetterie (billets vendus), les locations validées et les bordereaux de marchandises.',
+      'Sur une journée, « Comptage » : saisissez le montant réellement constaté pour obtenir l’écart, enregistrez ou clôturez.',
+      'La consultation est ouverte à tous ; la saisie du comptage et la clôture sont réservées aux ADMIN/SUPERADMIN.',
+      'Périmètre des recettes attendues à confirmer par le responsable métier.',
     ],
   },
   {
@@ -137,9 +148,10 @@ const SECTIONS = [
     icon: Bell,
     titre: 'Notifications et journal',
     points: [
-      'La cloche de l’en-tête regroupe les messages, arrivages, validations en attente et l’activité récente.',
-      'Le nombre affiché indique les notifications nouvelles ; ouvrir la cloche les marque comme lues.',
-      'Cliquer sur une notification ouvre l’écran correspondant.',
+      'La cloche de l’en-tête est alimentée automatiquement après chaque opération : billet vendu, envoi de marchandise, arrivage et demande de location (création, validation ou refus).',
+      'Chaque notification indique l’opération, l’auteur et son ancienneté ; cliquer dessus ouvre l’écran correspondant.',
+      'Le compteur affiche le nombre exact de notifications non lues (99+ au-delà). Il diminue à la lecture ; « Tout lu » le remet à zéro.',
+      'Les notifications sont personnelles : chacun ne voit que les siennes, selon son rôle.',
       'Administration → Journal : historique complet des connexions et opérations (ADMIN/SUPERADMIN).',
     ],
   },

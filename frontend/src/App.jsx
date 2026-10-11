@@ -16,7 +16,7 @@ import Arrets from '@/pages/Arrets'
 import Arrivages from '@/pages/Arrivages'
 import Bran from '@/pages/Bran'
 import Billets from '@/pages/Billets'
-import Clients from '@/pages/Clients'
+import Caisse from '@/pages/Caisse'
 import Locations from '@/pages/Locations'
 import Marchandises from '@/pages/Marchandises'
 import Messagerie from '@/pages/Messagerie'
@@ -81,7 +81,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="clients" element={<Clients />} />
+            <Route path="caisse" element={<Caisse />} />
             <Route path="messagerie" element={<Messagerie />} />
             <Route
               path="journal"

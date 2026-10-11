@@ -5,7 +5,13 @@ const { getPrisma } = require('../config/database');
 const { ApiError } = require('../utils/ApiError');
 const { dbCall } = require('../utils/db');
 const { journaliser } = require('../utils/journal');
+const notificationsService = require('./notificationsService');
 const { DOSSIER_PIECES_JOINTES } = require('../middlewares/upload');
+
+// Lien de notification pointant vers une conversation.
+function lienConversation(conversationId) {
+  return `/messagerie?conversation=${conversationId}`;
+}
 
 const SELECTEURS_UTILISATEUR = { id: true, nom: true, role: true, email: true };
 
@@ -291,6 +297,19 @@ async function creerConversation(donnees, fichiers, appelant) {
       details: { destinataires: idsValides.length, piecesJointes: fichiersValides.length },
     });
 
+    // Notifications automatiques aux destinataires de la conversation.
+    await notificationsService.creerNotifications({
+      destinataires: idsValides,
+      type: 'MESSAGE',
+      message: `De ${appelant.nom || 'Utilisateur'} : ${
+        notificationsService.tronquer(contenu) || 'Pièce jointe'
+      }`,
+      entite: 'Message',
+      entiteId: message.id,
+      lien: lienConversation(conversation.id),
+      acteurId: moi,
+    });
+
     return { conversationId: conversation.id, message: messageApi(message) };
   });
 }
@@ -327,6 +346,23 @@ async function envoyerMessage(conversationId, donnees, fichiers, appelant) {
       data: { dernierLuAt: new Date() },
     });
 
+    // Notifications automatiques aux autres participants.
+    const destinataires = await prisma.conversationParticipant.findMany({
+      where: { conversationId, utilisateurId: { not: moi } },
+      select: { utilisateurId: true },
+    });
+    await notificationsService.creerNotifications({
+      destinataires: destinataires.map((p) => p.utilisateurId),
+      type: 'MESSAGE',
+      message: `De ${appelant.nom || 'Utilisateur'} : ${
+        notificationsService.tronquer(contenu) || 'Pièce jointe'
+      }`,
+      entite: 'Message',
+      entiteId: message.id,
+      lien: lienConversation(conversationId),
+      acteurId: moi,
+    });
+
     return messageApi(message);
   });
 }
@@ -340,6 +376,11 @@ async function marquerLu(conversationId, appelant) {
       where: { conversationId_utilisateurId: { conversationId, utilisateurId: appelant.id } },
       data: { dernierLuAt: new Date() },
     });
+    // Les notifications de message liées à cette conversation deviennent lues.
+    await notificationsService.marquerLuesParLien(
+      appelant.id,
+      lienConversation(conversationId)
+    );
     return { nbNonLus: 0 };
   });
 }
@@ -354,6 +395,10 @@ async function viderConversation(conversationId, appelant) {
       where: { conversationId_utilisateurId: { conversationId, utilisateurId: appelant.id } },
       data: { effaceJusqua: maintenant, dernierLuAt: maintenant },
     });
+    await notificationsService.marquerLuesParLien(
+      appelant.id,
+      lienConversation(conversationId)
+    );
     return { vide: true };
   });
 }

@@ -1,7 +1,35 @@
 import Swal from 'sweetalert2'
 
+// Radix (Dialog modal) désactive les interactions hors de son contenu : il passe
+// le <body> en pointer-events: none, piège le focus et ferme la boîte au clic
+// extérieur. Un SweetAlert ouvert depuis une modale doit donc être rendu cliquable
+// et ne pas être interprété comme un clic extérieur (sinon il est invisible/inactif).
+function neutraliserPourModale(popup) {
+  const conteneur = popup?.closest?.('.swal2-container')
+  if (!conteneur) return
+  if (!document.querySelector('[data-slot="dialog-content"]')) return
+  conteneur.removeAttribute('aria-hidden')
+  const bloquer = (evenement) => evenement.stopPropagation()
+  for (const type of [
+    'pointerdown',
+    'mousedown',
+    'pointerup',
+    'mouseup',
+    'click',
+    'touchstart',
+    'touchend',
+    'focusin',
+    'focusout',
+  ]) {
+    conteneur.addEventListener(type, bloquer)
+  }
+}
+
+const AU_OUVERTURE = { didOpen: neutraliserPourModale }
+
 export function confirmerSuppression(message, titre = 'Confirmer la suppression') {
   return Swal.fire({
+    ...AU_OUVERTURE,
     title: titre,
     text: message,
     icon: 'warning',
@@ -24,6 +52,7 @@ export function confirmerAction({
   couleurConfirmer = '#16a34a',
 }) {
   return Swal.fire({
+    ...AU_OUVERTURE,
     title: titre,
     text: texte,
     icon: icone,
@@ -44,6 +73,7 @@ export async function demanderMotif({
   couleurConfirmer = '#16a34a',
 }) {
   const { isConfirmed, value } = await Swal.fire({
+    ...AU_OUVERTURE,
     title: titre,
     text: texte,
     icon: 'question',

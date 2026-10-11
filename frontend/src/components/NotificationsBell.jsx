@@ -1,27 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Activity,
   Bell,
   BellOff,
+  CalendarCheck,
+  CalendarClock,
+  CalendarX,
   CheckCheck,
   CheckCircle2,
   MessageSquare,
+  Package,
   PackageCheck,
+  Ticket,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import api from '@/services/api'
+import api, { EVENEMENT_NOTIFICATIONS } from '@/services/api'
 
-const CLE_VUES = 'fce_notifications_vues'
 const INTERVALLE = 30000
 
 const ICONES = {
-  MESSAGE: { icone: MessageSquare, classes: 'bg-sky-100 text-sky-700' },
-  VALIDATION: { icone: CheckCircle2, classes: 'bg-amber-100 text-amber-700' },
-  ARRIVAGE: { icone: PackageCheck, classes: 'bg-violet-100 text-violet-700' },
-  ACTIVITE: { icone: Activity, classes: 'bg-fce-100 text-fce-700' },
+  BILLET: { icone: Ticket, classes: 'bg-fce-100 text-fce-700' },
+  ENVOI: { icone: Package, classes: 'bg-violet-100 text-violet-700' },
+  ARRIVAGE: { icone: PackageCheck, classes: 'bg-sky-100 text-sky-700' },
+  LOCATION_DEMANDE: { icone: CalendarClock, classes: 'bg-amber-100 text-amber-700' },
+  LOCATION_VALIDEE: { icone: CalendarCheck, classes: 'bg-emerald-100 text-emerald-700' },
+  LOCATION_REFUSEE: { icone: CalendarX, classes: 'bg-rose-100 text-rose-700' },
+  MESSAGE: { icone: MessageSquare, classes: 'bg-indigo-100 text-indigo-700' },
 }
+
+const ICONE_DEFAUT = { icone: CheckCircle2, classes: 'bg-fce-100 text-fce-700' }
 
 // « il y a 5 min », « hier », « 12/03/2026 »…
 function depuis(valeur) {
@@ -39,26 +47,18 @@ function depuis(valeur) {
   return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date)
 }
 
-function lireVu() {
-  const valeur = localStorage.getItem(CLE_VUES)
-  if (valeur) return new Date(valeur)
-  // Première visite : on ne signale pas comme neuves les notifications déjà présentes.
-  const maintenant = new Date()
-  localStorage.setItem(CLE_VUES, maintenant.toISOString())
-  return maintenant
-}
-
 export default function NotificationsBell() {
   const navigate = useNavigate()
   const [ouvert, setOuvert] = useState(false)
   const [notifications, setNotifications] = useState([])
-  const [vu, setVu] = useState(lireVu)
+  const [nonLues, setNonLues] = useState(0)
   const conteneurRef = useRef(null)
 
   const charger = useCallback(async () => {
     try {
       const { data } = await api.get('/notifications')
       setNotifications(data.donnees || [])
+      setNonLues(data.nonLues || 0)
     } catch {
       // silencieux : le centre de notifications ne doit pas gêner l'utilisateur
     }
@@ -68,10 +68,13 @@ export default function NotificationsBell() {
     charger()
     const minuterie = setInterval(charger, INTERVALLE)
     const surFocus = () => charger()
+    const surRafraichir = () => charger()
     window.addEventListener('focus', surFocus)
+    window.addEventListener(EVENEMENT_NOTIFICATIONS, surRafraichir)
     return () => {
       clearInterval(minuterie)
       window.removeEventListener('focus', surFocus)
+      window.removeEventListener(EVENEMENT_NOTIFICATIONS, surRafraichir)
     }
   }, [charger])
 
@@ -91,23 +94,21 @@ export default function NotificationsBell() {
     }
   }, [ouvert])
 
-  const marquerVu = useCallback(() => {
-    const maintenant = new Date()
-    localStorage.setItem(CLE_VUES, maintenant.toISOString())
-    setVu(maintenant)
-  }, [])
-
-  const basculer = () => {
-    setOuvert((precedent) => {
-      if (!precedent) marquerVu()
-      return !precedent
-    })
+  const toutMarquerLues = () => {
+    setNotifications((liste) => liste.map((n) => ({ ...n, lu: true })))
+    setNonLues(0)
+    api.post('/notifications/tout-lu').catch(() => charger())
   }
-
-  const nonLues = notifications.filter((n) => new Date(n.date).getTime() > vu.getTime()).length
 
   const ouvrirNotification = (notification) => {
     setOuvert(false)
+    if (!notification.lu) {
+      setNotifications((liste) =>
+        liste.map((n) => (n.id === notification.id ? { ...n, lu: true } : n))
+      )
+      setNonLues((n) => Math.max(0, n - 1))
+      api.post(`/notifications/${notification.id}/lu`).catch(() => charger())
+    }
     if (notification.lien) navigate(notification.lien)
   }
 
@@ -116,7 +117,7 @@ export default function NotificationsBell() {
       <Button
         variant="ghost"
         size="icon"
-        onClick={basculer}
+        onClick={() => setOuvert((precedent) => !precedent)}
         title="Notifications"
         aria-label="Notifications"
         aria-expanded={ouvert}
@@ -124,7 +125,7 @@ export default function NotificationsBell() {
         <Bell />
         {nonLues > 0 && (
           <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-fce-600 px-1 text-[10px] font-semibold text-white">
-            {nonLues > 9 ? '9+' : nonLues}
+            {nonLues > 99 ? '99+' : nonLues}
           </span>
         )}
       </Button>
@@ -136,12 +137,12 @@ export default function NotificationsBell() {
               <span className="font-semibold">Notifications</span>
               {nonLues > 0 && (
                 <span className="rounded-full bg-fce-100 px-2 py-0.5 text-xs font-medium text-fce-700">
-                  {nonLues} nouvelle{nonLues > 1 ? 's' : ''}
+                  {nonLues} non lue{nonLues > 1 ? 's' : ''}
                 </span>
               )}
             </div>
             {nonLues > 0 && (
-              <Button variant="ghost" size="sm" onClick={marquerVu} title="Tout marquer comme lu">
+              <Button variant="ghost" size="sm" onClick={toutMarquerLues} title="Tout marquer comme lu">
                 <CheckCheck />
                 <span className="hidden sm:inline">Tout lu</span>
               </Button>
@@ -156,8 +157,7 @@ export default function NotificationsBell() {
               </div>
             ) : (
               notifications.map((n) => {
-                const visuel = ICONES[n.type] || ICONES.ACTIVITE
-                const estNouvelle = new Date(n.date).getTime() > vu.getTime()
+                const visuel = ICONES[n.type] || ICONE_DEFAUT
                 const Icone = visuel.icone
                 return (
                   <button
@@ -165,7 +165,7 @@ export default function NotificationsBell() {
                     type="button"
                     onClick={() => ouvrirNotification(n)}
                     className={`flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/60 ${
-                      estNouvelle ? 'bg-fce-50/60' : ''
+                      n.lu ? '' : 'bg-fce-50/60'
                     }`}
                   >
                     <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${visuel.classes}`}>
@@ -174,7 +174,7 @@ export default function NotificationsBell() {
                     <span className="min-w-0 flex-1">
                       <span className="flex items-start justify-between gap-2">
                         <span className="text-sm font-medium">{n.titre}</span>
-                        {estNouvelle && <span className="mt-1 size-2 shrink-0 rounded-full bg-fce-600" />}
+                        {!n.lu && <span className="mt-1 size-2 shrink-0 rounded-full bg-fce-600" />}
                       </span>
                       {n.message && (
                         <span className="mt-0.5 block truncate text-xs text-muted-foreground">
@@ -183,6 +183,7 @@ export default function NotificationsBell() {
                       )}
                       <span className="mt-1 block text-[11px] text-muted-foreground">
                         {depuis(n.date)}
+                        {n.acteurNom ? ` · ${n.acteurNom}` : ''}
                       </span>
                     </span>
                   </button>

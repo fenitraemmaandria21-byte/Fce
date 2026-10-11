@@ -4,6 +4,7 @@ const { dbCall } = require('../utils/db');
 const { actif } = require('../utils/filtres');
 const { parsePagination, paginated } = require('../utils/pagination');
 const { journaliser } = require('../utils/journal');
+const notificationsService = require('./notificationsService');
 
 // ------------------------------------------------------------
 // MARCHANDISES — processus :
@@ -78,6 +79,20 @@ async function creer(donnees, appelant) {
       entite: 'Envoi',
       entiteId: envoi.id,
       details: { nombreColis: envoi.nombreColis, lignes: donnees.lignes.length },
+    });
+
+    // Notification automatique après l'enregistrement de l'envoi.
+    const admins = await notificationsService.destinatairesParRole(['ADMIN', 'SUPERADMIN']);
+    await notificationsService.creerNotifications({
+      destinataires: [...admins, appelant.id],
+      type: 'ENVOI',
+      message: `Envoi ${
+        envoi.reference || `${envoi.expediteurNom} → ${envoi.destinataireNom}`
+      }`,
+      entite: 'Envoi',
+      entiteId: envoi.id,
+      lien: '/marchandises',
+      acteurId: appelant.id,
     });
 
     return recupererInterne(envoi.id);
