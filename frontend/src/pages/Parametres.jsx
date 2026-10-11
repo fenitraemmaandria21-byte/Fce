@@ -5,6 +5,7 @@ import {
   Container,
   MapPin,
   Pencil,
+  Plus,
   Settings,
   Signpost,
   TrainFront,
@@ -36,6 +37,12 @@ const modificationSchema = z.object({
   valeur: z.string().trim().min(1, 'La valeur est requise'),
 })
 
+const creationSchema = z.object({
+  cle: z.string().trim().min(2, 'La clé est requise (2 caractères min.)').max(64),
+  valeur: z.string().trim().min(1, 'La valeur est requise'),
+  description: z.string().trim().max(255).optional().or(z.literal('')),
+})
+
 function ParametresSysteme() {
   const { chargement, donnees, erreur, message, recharger } = useApi('/parametres')
   const lignes = donnees?.donnees || []
@@ -46,6 +53,49 @@ function ParametresSysteme() {
   const [erreurs, setErreurs] = useState({})
   const [enCours, setEnCours] = useState(false)
   const [erreurGlobale, setErreurGlobale] = useState(null)
+
+  const [dialogueCreation, setDialogueCreation] = useState(false)
+  const [formCreation, setFormCreation] = useState({ cle: '', valeur: '', description: '' })
+  const [erreursCreation, setErreursCreation] = useState({})
+  const [creationEnCours, setCreationEnCours] = useState(false)
+  const [erreurCreationGlobale, setErreurCreationGlobale] = useState(null)
+
+  const ouvrirCreation = () => {
+    setFormCreation({ cle: '', valeur: '', description: '' })
+    setErreursCreation({})
+    setErreurCreationGlobale(null)
+    setDialogueCreation(true)
+  }
+
+  const modifierChampCreation = (cle, valeur) => {
+    setFormCreation((f) => ({ ...f, [cle]: valeur }))
+    setErreursCreation((e) => ({ ...e, [cle]: undefined }))
+  }
+
+  const soumettreCreation = async () => {
+    const resultat = creationSchema.safeParse(formCreation)
+    if (!resultat.success) {
+      const suivantes = {}
+      for (const probleme of resultat.error.issues) {
+        suivantes[probleme.path[0]] = probleme.message
+      }
+      setErreursCreation(suivantes)
+      setErreurCreationGlobale(null)
+      return
+    }
+    setCreationEnCours(true)
+    setErreurCreationGlobale(null)
+    try {
+      await api.post('/parametres', resultat.data)
+      toast.success('Paramètre créé.')
+      setDialogueCreation(false)
+      recharger()
+    } catch (e) {
+      setErreurCreationGlobale(messageApi(e, 'Création impossible'))
+    } finally {
+      setCreationEnCours(false)
+    }
+  }
 
   const ouvrirEdition = (parametre) => {
     setEnEdition(parametre)
@@ -127,6 +177,13 @@ function ParametresSysteme() {
         <AlerteErreur message={message} onReessayer={recharger} />
       )}
 
+      <div className="flex justify-end">
+        <Button onClick={ouvrirCreation}>
+          <Plus />
+          Nouveau paramètre
+        </Button>
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <SectionListe
@@ -184,6 +241,54 @@ function ParametresSysteme() {
             placeholder="Valeur du paramètre"
           />
           {erreurs.valeur && <p className="text-sm text-destructive">{erreurs.valeur}</p>}
+        </div>
+      </DialogueFormulaire>
+
+      <DialogueFormulaire
+        ouvert={dialogueCreation}
+        onFermer={() => setDialogueCreation(false)}
+        titre="Nouveau paramètre"
+        description="La clé est normalisée automatiquement (majuscules, sans espaces)."
+        messageErreur={erreurCreationGlobale}
+        enCours={creationEnCours}
+        onSoumettre={soumettreCreation}
+        libelleValider="Créer le paramètre"
+      >
+        <div className="space-y-2">
+          <Label htmlFor="nouvelle-cle">Clé</Label>
+          <Input
+            id="nouvelle-cle"
+            value={formCreation.cle}
+            onChange={(e) => modifierChampCreation('cle', e.target.value)}
+            placeholder="EX. TARIF_SPECIAL"
+          />
+          {erreursCreation.cle && (
+            <p className="text-sm text-destructive">{erreursCreation.cle}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nouvelle-valeur">Valeur</Label>
+          <Input
+            id="nouvelle-valeur"
+            value={formCreation.valeur}
+            onChange={(e) => modifierChampCreation('valeur', e.target.value)}
+            placeholder="Valeur du paramètre"
+          />
+          {erreursCreation.valeur && (
+            <p className="text-sm text-destructive">{erreursCreation.valeur}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nouvelle-description">Description (optionnel)</Label>
+          <Input
+            id="nouvelle-description"
+            value={formCreation.description}
+            onChange={(e) => modifierChampCreation('description', e.target.value)}
+            placeholder="À quoi sert ce paramètre"
+          />
+          {erreursCreation.description && (
+            <p className="text-sm text-destructive">{erreursCreation.description}</p>
+          )}
         </div>
       </DialogueFormulaire>
     </div>

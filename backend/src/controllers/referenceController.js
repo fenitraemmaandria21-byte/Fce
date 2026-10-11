@@ -101,6 +101,11 @@ const listerParametres = asyncHandler(async (req, res) => {
   res.json(await referenceService.listerParametres());
 });
 
+const creerParametre = asyncHandler(async (req, res) => {
+  const parametre = await referenceService.creerParametre(req.body, req.utilisateur);
+  res.status(201).json({ donnees: parametre });
+});
+
 const modifierParametre = asyncHandler(async (req, res) => {
   res.json(
     await referenceService.modifierParametre(req.params.cle, req.body, req.utilisateur)
@@ -136,6 +141,7 @@ module.exports = {
   modifierWagon,
   supprimerWagon,
   listerParametres,
+  creerParametre,
   modifierParametre,
   supprimerParametre,
 };

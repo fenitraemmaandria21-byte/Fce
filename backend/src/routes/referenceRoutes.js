@@ -33,6 +33,7 @@ router.delete('/wagons/:id', requireRole('SUPERADMIN'), referenceController.supp
 
 // Paramètres système : SUPERADMIN uniquement
 router.get('/parametres', requireRole('SUPERADMIN'), referenceController.listerParametres);
+router.post('/parametres', requireRole('SUPERADMIN'), referenceController.creerParametre);
 router.put('/parametres/:cle', requireRole('SUPERADMIN'), referenceController.modifierParametre);
 router.delete('/parametres/:cle', requireRole('SUPERADMIN'), referenceController.supprimerParametre);
 

@@ -687,6 +687,51 @@ async function listerParametres() {
   });
 }
 
+// POST /api/parametres — SUPERADMIN uniquement : création d'un paramètre.
+async function creerParametre(donnees, appelant) {
+  if (!appelant || appelant.role !== 'SUPERADMIN') {
+    throw new ApiError(403, 'ACCES_REFUSE', 'Réservé au SUPERADMIN');
+  }
+  return dbCall(async () => {
+    const prisma = getPrisma();
+
+    const cle = String(donnees?.cle || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    if (cle.length < 2) {
+      throw new ApiError(400, 'CLE_REQUISE', 'La clé est requise (2 caractères min.)');
+    }
+
+    const valeur = donnees?.valeur;
+    if (valeur === undefined || String(valeur).trim() === '') {
+      throw new ApiError(400, 'VALEUR_REQUISE', 'La valeur est requise');
+    }
+
+    const existant = await prisma.parametreSysteme.findUnique({ where: { cle } });
+    if (existant) {
+      throw new ApiError(409, 'PARAMETRE_EXISTANT', 'Un paramètre avec cette clé existe déjà');
+    }
+
+    const description = donnees?.description ? String(donnees.description).trim() : null;
+
+    const parametre = await prisma.parametreSysteme.create({
+      data: { cle, valeur: String(valeur).trim(), description, modifieParId: appelant.id },
+    });
+
+    await journaliser({
+      utilisateurId: appelant.id,
+      action: 'CREATION_PARAMETRE',
+      entite: 'ParametreSysteme',
+      entiteId: cle,
+      details: { cle, valeur: parametre.valeur },
+    });
+
+    return parametre;
+  });
+}
+
 // PUT /api/parametres/:cle — SUPERADMIN uniquement.
 async function modifierParametre(cle, donnees, appelant) {
   if (!appelant || appelant.role !== 'SUPERADMIN') {
@@ -768,6 +813,7 @@ module.exports = {
   modifierWagon,
   supprimerWagon,
   listerParametres,
+  creerParametre,
   modifierParametre,
   supprimerParametre,
 };
