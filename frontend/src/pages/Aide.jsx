@@ -3,6 +3,7 @@ import {
   FileText,
   LifeBuoy,
   LogIn,
+  MessageSquare,
   MousePointerClick,
   Package,
   PackageCheck,
@@ -34,7 +35,7 @@ const ETAPES = [
     icon: MousePointerClick,
     titre: '2. Naviguer',
     texte:
-      'Utilisez la barre latérale : Pilotage, Exploitation, Administration. Le bouton ☰ replie le menu.',
+      'Utilisez la barre latérale : Pilotage, Exploitation, Communication, Administration. Le bouton ☰ replie le menu.',
   },
   {
     icon: Ticket,
@@ -107,6 +108,17 @@ const SECTIONS = [
       'Administration → Utilisateurs : créer un compte, définir le rôle, activer/désactiver.',
       'Administration → Clients : créer, consulter, modifier ou supprimer une fiche client.',
       'Administration → Paramètres : réservé au SUPERADMIN.',
+    ],
+  },
+  {
+    icon: MessageSquare,
+    titre: 'Messagerie interne',
+    points: [
+      'Communication → Messagerie : échangez avec les autres utilisateurs.',
+      'Nouvelle conversation : choisissez un ou plusieurs destinataires (diffusion possible).',
+      'Joignez des fichiers (images, PDF, Word/Excel, texte — 10 Mo max, 5 par message).',
+      'Le badge du menu indique les messages non lus.',
+      'Vous pouvez supprimer vos propres messages, vider une conversation ou la quitter.',
     ],
   },
 ]

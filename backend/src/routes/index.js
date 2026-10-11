@@ -15,6 +15,7 @@ router.use('/billets', require('./billetsRoutes'));
 router.use('/', require('./marchandisesRoutes'));
 router.use('/locations', require('./locationsRoutes'));
 router.use('/clients', require('./clientsRoutes'));
+router.use('/messagerie', require('./messagerieRoutes'));
 router.use('/journal', require('./journalRoutes'));
 router.use('/', require('./documentsRoutes'));
 router.use('/', require('./dashboardRoutes'));

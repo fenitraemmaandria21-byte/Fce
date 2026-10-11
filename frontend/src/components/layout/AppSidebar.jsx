@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   LogOut,
+  MessageSquare,
   Package,
   PackageCheck,
   Settings,
@@ -10,8 +11,10 @@ import {
   User,
   Users,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Sidebar,
@@ -35,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/context/AuthContext'
+import api from '@/services/api'
 
 const MENU = [
   {
@@ -49,6 +53,10 @@ const MENU = [
       { titre: 'Arrivages', url: '/arrivages', icon: PackageCheck },
       { titre: 'Locations', url: '/locations', icon: Truck },
     ],
+  },
+  {
+    label: 'Communication',
+    items: [{ titre: 'Messagerie', url: '/messagerie', icon: MessageSquare, badge: 'messagerie' }],
   },
   {
     label: 'Administration',
@@ -78,6 +86,25 @@ const LIBELLES_ROLE = {
 export default function AppSidebar() {
   const { utilisateur, deconnexion } = useAuth()
   const role = utilisateur?.role
+  const [nonLus, setNonLus] = useState(0)
+
+  useEffect(() => {
+    let actif = true
+    const charger = () => {
+      api
+        .get('/messagerie/non-lus')
+        .then((r) => {
+          if (actif) setNonLus(r.data?.total || 0)
+        })
+        .catch(() => {})
+    }
+    charger()
+    const minuterie = setInterval(charger, 15000)
+    return () => {
+      actif = false
+      clearInterval(minuterie)
+    }
+  }, [])
 
   return (
     <Sidebar collapsible="icon">
@@ -114,6 +141,11 @@ export default function AppSidebar() {
                         >
                           <item.icon />
                           <span>{item.titre}</span>
+                          {item.badge === 'messagerie' && nonLus > 0 && (
+                            <Badge className="ml-auto bg-fce-600 text-white group-data-[collapsible=icon]:hidden">
+                              {nonLus}
+                            </Badge>
+                          )}
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

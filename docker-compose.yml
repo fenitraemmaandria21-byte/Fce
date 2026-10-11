@@ -30,9 +30,12 @@ services:
       BOOTSTRAP_SECRET: ${BOOTSTRAP_SECRET}
       PORT: 4000
       FRONTEND_URL: ${FRONTEND_URL_DOCKER:-http://localhost:8888}
+      UPLOADS_DIR: /app/uploads
       NODE_ENV: production
     ports:
       - "${PORT:-4000}:4000"
+    volumes:
+      - backend_uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,3 +53,4 @@ services:
 
 volumes:
   postgres_data:
+  backend_uploads:

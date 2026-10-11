@@ -9,6 +9,8 @@ coverage/
 
 backend/prisma/*.db
 backend/logs/
+backend/uploads/
+uploads/
 
 .DS_Store
 Thumbs.db

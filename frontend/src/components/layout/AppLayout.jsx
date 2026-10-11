@@ -35,6 +35,7 @@ const LIBELLES_PAGES = {
   '/rfe': 'RFE',
   '/utilisateurs': 'Utilisateurs',
   '/clients': 'Clients',
+  '/messagerie': 'Messagerie',
   '/parametres': 'Paramètres',
   '/aide': 'Comment utiliser ?',
 }

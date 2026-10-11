@@ -259,6 +259,10 @@ model User {
   journal             JournalActivite[]
   parametresModifies  ParametreSysteme[]
 
+  conversationsCreees Conversation[]             @relation("ConversationCreePar")
+  conversations        ConversationParticipant[]  @relation("ConversationParticipant")
+  messagesEnvoyes      Message[]                  @relation("MessageExpediteur")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -537,4 +541,73 @@ model JournalActivite {
   @@index([createdAt])
   @@index([entite, entiteId])
   @@map("journal_activite")
+}
+
+// ------------------------------------------------------------
+// MESSAGERIE INTERNE
+// ------------------------------------------------------------
+
+model Conversation {
+  id        String  @id @default(cuid())
+  sujet     String?
+  creeParId String
+  creePar   User    @relation("ConversationCreePar", fields: [creeParId], references: [id])
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([updatedAt])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  utilisateurId  String
+  utilisateur    User         @relation("ConversationParticipant", fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  dernierLuAt  DateTime? // dernier message lu par cet utilisateur
+  effaceJusqua DateTime? // "vider la conversation" pour cet utilisateur
+
+  createdAt DateTime @default(now())
+
+  @@unique([conversationId, utilisateurId])
+  @@index([utilisateurId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  expediteurId   String
+  expediteur     User         @relation("MessageExpediteur", fields: [expediteurId], references: [id])
+
+  contenu String
+
+  piecesJointes PieceJointe[]
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model PieceJointe {
+  id        String  @id @default(cuid())
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  nom    String
+  type   String
+  taille Int
+  chemin String // nom du fichier stocké sur le disque (uploads/messages)
+
+  createdAt DateTime @default(now())
+
+  @@map("pieces_jointes")
 }

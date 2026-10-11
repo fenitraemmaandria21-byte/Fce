@@ -14,6 +14,8 @@ const env = {
   // Secret d'amorçage : autorise la création du PREMIER superadmin
   // tant qu'aucun utilisateur n'existe. Vide => amorçage désactivé.
   bootstrapSecret: process.env.BOOTSTRAP_SECRET || null,
+  // Répertoire de stockage des pièces jointes de la messagerie.
+  uploadsDir: process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads'),
 };
 
 

@@ -28,8 +28,8 @@ Ce guide explique, étape par étape, comment utiliser chaque partie de l'applic
 
 ## 2. Comprendre l'écran principal
 
-- **Barre latérale (gauche)** : navigation groupée en quatre blocs — *Pilotage*,
-  *Exploitation*, *Administration*, *Assistance*. Utiliser le bouton **☰** (en haut
+- **Barre latérale (gauche)** : navigation groupée — *Pilotage*,
+  *Exploitation*, *Communication*, *Administration*, *Assistance*. Utiliser le bouton **☰** (en haut
   à gauche) pour la replier/déplier : le logo s'adapte automatiquement.
 - **En-tête** : fil d'Ariane (emplacement) + bouton **?** (aide) + rôle de
   l'utilisateur connecté.
@@ -148,7 +148,31 @@ Menu **Administration** :
 
 ---
 
-## 11. Statistiques
+## 11. Messagerie interne
+
+La messagerie permet aux utilisateurs de l'application de s'écrire entre eux.
+
+1. Ouvrir **Communication → Messagerie** dans la barre latérale.
+2. Cliquer sur **Nouvelle conversation**, choisir un ou plusieurs destinataires
+   (boutons rapides : *Tous les agents*, *Tous les admins*, *Tout le monde*).
+3. Ajouter un **sujet** (facultatif pour une discussion individuelle) et écrire le
+   message. Des **fichiers** peuvent être joints (images, PDF, Word/Excel, texte —
+   10 Mo max, 5 fichiers par message).
+4. À plusieurs destinataires, un **groupe** est créé ; à un seul destinataire, la
+   discussion individuelle existante est réutilisée.
+
+Dans une conversation :
+
+- Le fil se rafraîchit automatiquement (environ toutes les 7 secondes).
+- **Vider** masque l'historique pour vous seulement ; **Quitter** retire la
+  conversation de votre liste.
+- Une icône corbeille supprime **vos propres** messages ; les messages des autres
+  ne peuvent pas être supprimés.
+- Le **badge du menu** et un compteur dans la liste indiquent les messages non lus.
+
+---
+
+## 12. Statistiques
 
 1. Ouvrir **Statistiques** (accessible depuis la barre latérale).
 2. Filtrer par période et par type d'activité.
@@ -156,7 +180,7 @@ Menu **Administration** :
 
 ---
 
-## 12. Astuces et bonnes pratiques
+## 13. Astuces et bonnes pratiques
 
 - Toujours **rafraîchir** après une saisie si la liste semble figée.
 - Les messages (notifications en haut à droite) disparaissent tout seuls ;
@@ -167,7 +191,7 @@ Menu **Administration** :
 
 ---
 
-## 13. Dépannage rapide
+## 14. Dépannage rapide
 
 | Symptôme | Piste |
 |---|---|

@@ -17,6 +17,7 @@ import Billets from '@/pages/Billets'
 import Clients from '@/pages/Clients'
 import Locations from '@/pages/Locations'
 import Marchandises from '@/pages/Marchandises'
+import Messagerie from '@/pages/Messagerie'
 import Rfe from '@/pages/Rfe'
 import Statistiques from '@/pages/Statistiques'
 import Parametres from '@/pages/Parametres'
@@ -77,6 +78,7 @@ export default function App() {
               }
             />
             <Route path="clients" element={<Clients />} />
+            <Route path="messagerie" element={<Messagerie />} />
             <Route
               path="parametres"
               element={
