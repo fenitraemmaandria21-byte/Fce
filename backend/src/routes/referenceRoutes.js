@@ -10,6 +10,7 @@ router.get('/zones', referenceController.listerZones);
 router.get('/arrets', referenceController.listerArrets);
 router.get('/tarifs/billets', referenceController.listerTarifsBillet);
 router.get('/tarifs/locations', referenceController.listerTarifsLocation);
+router.get('/tarifs/marchandise', referenceController.listerTarifsMarchandise);
 router.get('/trains', referenceController.listerTrains);
 router.get('/voitures', referenceController.listerVoitures);
 router.get('/wagons', referenceController.listerWagons);
@@ -23,6 +24,8 @@ router.put('/tarifs/billets/:id', requireRole('SUPERADMIN'), referenceController
 router.delete('/tarifs/billets/:id', requireRole('SUPERADMIN'), referenceController.supprimerTarifBillet);
 router.put('/tarifs/locations/:id', requireRole('SUPERADMIN'), referenceController.modifierTarifLocation);
 router.delete('/tarifs/locations/:id', requireRole('SUPERADMIN'), referenceController.supprimerTarifLocation);
+router.put('/tarifs/marchandise/:id', requireRole('SUPERADMIN'), referenceController.modifierTarifMarchandise);
+router.delete('/tarifs/marchandise/:id', requireRole('SUPERADMIN'), referenceController.supprimerTarifMarchandise);
 router.put('/trains/:id', requireRole('SUPERADMIN'), referenceController.modifierTrain);
   router.post('/trains', requireRole('SUPERADMIN'), referenceController.creerTrain);
   router.delete('/trains/:id', requireRole('SUPERADMIN'), referenceController.supprimerTrain);

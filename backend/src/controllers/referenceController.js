@@ -57,6 +57,20 @@ const supprimerTarifLocation = asyncHandler(async (req, res) => {
   res.json(await referenceService.supprimerTarifLocation(req.params.id, req.utilisateur));
 });
 
+const listerTarifsMarchandise = asyncHandler(async (req, res) => {
+  res.json(await referenceService.listerTarifsMarchandise(req));
+});
+
+const modifierTarifMarchandise = asyncHandler(async (req, res) => {
+  res.json(
+    await referenceService.modifierTarifMarchandise(req.params.id, req.body, req.utilisateur)
+  );
+});
+
+const supprimerTarifMarchandise = asyncHandler(async (req, res) => {
+  res.json(await referenceService.supprimerTarifMarchandise(req.params.id, req.utilisateur));
+});
+
 const listerTrains = asyncHandler(async (req, res) => {
   res.json(await referenceService.listerTrains());
 });
@@ -130,6 +144,9 @@ module.exports = {
   modifierTarifLocation,
   supprimerTarifBillet,
   supprimerTarifLocation,
+  listerTarifsMarchandise,
+  modifierTarifMarchandise,
+  supprimerTarifMarchandise,
   listerTrains,
   creerTrain,
   modifierTrain,

@@ -13,10 +13,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useApi } from '@/hooks/useApi'
 import {
+  LIBELLES_CATEGORIE_MARCHANDISE,
   LIBELLES_CLASSE,
   LIBELLES_FORMULE,
   LIBELLES_TYPE_LOCATION,
   formatArgent,
+  formatTarifKg,
 } from '@/lib/affichage'
 import { confirmerSuppression } from '@/lib/confirmation'
 import api, { messageApi } from '@/services/api'
@@ -28,31 +30,14 @@ const modificationSchema = z.object({
     .positive('Le montant doit être positif'),
 })
 
-function DialogueMontant({ ouvert, onFermer, titre, enCours, erreur, onSoumettre, formulaire, onChanger }) {
-  return (
-    <DialogueFormulaire
-      ouvert={ouvert}
-      onFermer={onFermer}
-      titre={titre}
-      description="Montant en ariary (Ar). Cette valeur est utilisée par les calculs de la plateforme."
-      messageErreur={erreur}
-      enCours={enCours}
-      onSoumettre={onSoumettre}
-      libelleValider="Enregistrer"
-    >
-      <div className="space-y-2">
-        <Label htmlFor="tarif-montant">Montant (Ar)</Label>
-        <Input
-          id="tarif-montant"
-          type="number"
-          value={formulaire.montant}
-          onChange={(e) => onChanger('montant', e.target.value)}
-          placeholder="25000"
-        />
-      </div>
-    </DialogueFormulaire>
-  )
-}
+const tarifKgSchema = z.object({
+  tarifKg: z
+    .string()
+    .trim()
+    .min(1, 'Le tarif est requis')
+    .refine((v) => !Number.isNaN(Number.parseFloat(v)), 'Tarif invalide (nombre attendu)')
+    .refine((v) => Number.parseFloat(v) >= 0, 'Le tarif doit être positif'),
+})
 
 function BoutonModifier({ titre, onModifier }) {
   return (
@@ -73,22 +58,61 @@ function BoutonSupprimer({ titre, onSupprimer }) {
 export default function Tarifs() {
   const tarifsBillets = useApi('/tarifs/billets')
   const tarifsLocations = useApi('/tarifs/locations')
+  const tarifsMarchandise = useApi('/tarifs/marchandise')
 
   const [dialogue, setDialogue] = useState({ ouvert: false, type: null, ligne: null })
-  const [formulaire, setFormulaire] = useState({ montant: '' })
+  const [formulaire, setFormulaire] = useState({ montant: '', tarifKg: '' })
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState(null)
 
-  const erreurGlobale = tarifsBillets.erreur || tarifsLocations.erreur
-  const message = tarifsBillets.erreur ? tarifsBillets.message : tarifsLocations.message
+  const estMarchandise = dialogue.type === 'marchandise'
+  const erreurGlobale =
+    tarifsBillets.erreur || tarifsLocations.erreur || tarifsMarchandise.erreur
+  const message = tarifsBillets.erreur
+    ? tarifsBillets.message
+    : tarifsLocations.erreur
+      ? tarifsLocations.message
+      : tarifsMarchandise.message
+
+  const rechargerTout = () => {
+    tarifsBillets.recharger()
+    tarifsLocations.recharger()
+    tarifsMarchandise.recharger()
+  }
 
   const ouvrirEdition = (type, ligne) => {
     setDialogue({ ouvert: true, type, ligne })
-    setFormulaire({ montant: String(ligne.montant) })
+    setFormulaire({
+      montant: type === 'marchandise' ? '' : String(ligne.montant),
+      tarifKg: type === 'marchandise' ? String(ligne.tarifKg) : '',
+    })
     setErreur(null)
   }
 
   const soumettre = async () => {
+    if (estMarchandise) {
+      const resultat = tarifKgSchema.safeParse(formulaire)
+      if (!resultat.success) {
+        setErreur(resultat.error.issues[0]?.message || 'Tarif invalide')
+        return
+      }
+      setEnCours(true)
+      setErreur(null)
+      try {
+        await api.put(`/tarifs/marchandise/${dialogue.ligne.id}`, {
+          tarifKg: Number.parseFloat(resultat.data.tarifKg),
+        })
+        toast.success('Tarif modifié.')
+        setDialogue({ ouvert: false, type: null, ligne: null })
+        tarifsMarchandise.recharger()
+      } catch (e) {
+        setErreur(messageApi(e, 'Enregistrement impossible'))
+      } finally {
+        setEnCours(false)
+      }
+      return
+    }
+
     const resultat = modificationSchema.safeParse(formulaire)
     if (!resultat.success) {
       setErreur('Montant invalide : entier positif requis (en ariary)')
@@ -117,17 +141,23 @@ export default function Tarifs() {
     const descriptif =
       type === 'billet'
         ? `${ligne.zone?.code || '—'} / ${LIBELLES_CLASSE[ligne.classe] || ligne.classe}`
-        : `${LIBELLES_TYPE_LOCATION[ligne.type] || ligne.type}${ligne.cle ? ` / ${LIBELLES_FORMULE[ligne.cle] || ligne.cle}` : ''}`
-    if (!(await confirmerSuppression(`Supprimer le tarif « ${descriptif} » (${formatArgent(ligne.montant)}) ?`))) return
+        : type === 'location'
+          ? `${LIBELLES_TYPE_LOCATION[ligne.type] || ligne.type}${ligne.cle ? ` / ${LIBELLES_FORMULE[ligne.cle] || ligne.cle}` : ''}`
+          : `${LIBELLES_CATEGORIE_MARCHANDISE[ligne.categorie] || ligne.categorie} / ${ligne.zone?.code || '—'}`
+    const valeur = type === 'marchandise' ? formatTarifKg(ligne.tarifKg) : formatArgent(ligne.montant)
+    if (!(await confirmerSuppression(`Supprimer le tarif « ${descriptif} » (${valeur}) ?`))) return
     const endpoint =
       type === 'billet'
         ? `/tarifs/billets/${ligne.id}`
-        : `/tarifs/locations/${ligne.id}`
+        : type === 'location'
+          ? `/tarifs/locations/${ligne.id}`
+          : `/tarifs/marchandise/${ligne.id}`
     try {
       await api.delete(endpoint)
       toast.success('Tarif supprimé.')
       tarifsBillets.recharger()
       tarifsLocations.recharger()
+      tarifsMarchandise.recharger()
     } catch (e) {
       toast.error(messageApi(e, 'Suppression impossible'))
     }
@@ -140,7 +170,7 @@ export default function Tarifs() {
         apparaissent comme « À valider » dans les pages concernées.
       </p>
 
-      {erreurGlobale && <AlerteErreur message={message} onReessayer={() => { tarifsBillets.recharger(); tarifsLocations.recharger(); }} />}
+      {erreurGlobale && <AlerteErreur message={message} onReessayer={rechargerTout} />}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -160,6 +190,30 @@ export default function Tarifs() {
               <div className="flex justify-end gap-1">
                 <BoutonModifier titre="Modifier le tarif" onModifier={() => ouvrirEdition('billet', l)} />
                 <BoutonSupprimer titre="Supprimer le tarif" onSupprimer={() => supprimer('billet', l)} />
+              </div>
+            )}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Tarifs marchandises (par catégorie et zone, Ar/kg)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SectionListe
+            chargement={tarifsMarchandise.chargement}
+            lignes={tarifsMarchandise.donnees?.donnees || []}
+            messageVide={tarifsMarchandise.erreur ? 'Données indisponibles.' : 'Aucun tarif.'}
+            colonnes={[
+              { titre: 'Catégorie', rendre: (l) => LIBELLES_CATEGORIE_MARCHANDISE[l.categorie] || l.categorie },
+              { titre: 'Zone', rendre: (l) => <Badge variant="outline">{l.zone?.code || '—'}</Badge> },
+              { titre: 'Tarif', align: 'right', rendre: (l) => <span className="font-medium tabular-nums">{formatTarifKg(l.tarifKg)}</span> },
+            ]}
+            rendreActions={(l) => (
+              <div className="flex justify-end gap-1">
+                <BoutonModifier titre="Modifier le tarif" onModifier={() => ouvrirEdition('marchandise', l)} />
+                <BoutonSupprimer titre="Supprimer le tarif" onSupprimer={() => supprimer('marchandise', l)} />
               </div>
             )}
           />
@@ -191,16 +245,53 @@ export default function Tarifs() {
         </CardContent>
       </Card>
 
-      <DialogueMontant
+      <DialogueFormulaire
         ouvert={dialogue.ouvert}
         onFermer={() => setDialogue({ ouvert: false, type: null, ligne: null })}
         titre="Modifier le tarif"
+        description={
+          estMarchandise
+            ? 'Tarif en ariary par kilogramme (Ar/kg). Valeur de référence validée par la FCE.'
+            : 'Montant en ariary (Ar). Cette valeur est utilisée par les calculs de la plateforme.'
+        }
+        messageErreur={erreur}
         enCours={enCours}
-        erreur={erreur}
         onSoumettre={soumettre}
-        formulaire={formulaire}
-        onChanger={(cle, valeur) => setFormulaire((f) => ({ ...f, [cle]: valeur }))}
-      />
+        libelleValider="Enregistrer"
+      >
+        {estMarchandise ? (
+          <div className="space-y-2">
+            <Label htmlFor="tarif-marchandise">Tarif (Ar/kg)</Label>
+            <Input
+              id="tarif-marchandise"
+              type="number"
+              step="0.01"
+              min="0"
+              value={formulaire.tarifKg}
+              onChange={(e) => setFormulaire((f) => ({ ...f, tarifKg: e.target.value }))}
+              placeholder="166,67"
+            />
+            {dialogue.ligne && (
+              <p className="text-sm text-muted-foreground">
+                {LIBELLES_CATEGORIE_MARCHANDISE[dialogue.ligne.categorie] || dialogue.ligne.categorie}
+                {' · '}
+                Zone {dialogue.ligne.zone?.code || '—'}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="tarif-montant">Montant (Ar)</Label>
+            <Input
+              id="tarif-montant"
+              type="number"
+              value={formulaire.montant}
+              onChange={(e) => setFormulaire((f) => ({ ...f, montant: e.target.value }))}
+              placeholder="25000"
+            />
+          </div>
+        )}
+      </DialogueFormulaire>
     </div>
   )
 }

@@ -91,6 +91,15 @@ enum StatutCaisse {
   CLOTUREE
 }
 
+// Catégories de marchandise pour le tarif au kg (Ar/kg) — libellés FCE validés.
+enum CategorieMarchandise {
+  PPN
+  CARBURANT_MAJORE_SANS_TVA
+  CARBURANT_MAJORE_AVEC_TVA
+  DIVERS
+  DIVERS_ENCOMBRANTS
+}
+
 // ------------------------------------------------------------
 // RÉFÉRENTIELS FCE
 // ------------------------------------------------------------
@@ -101,6 +110,7 @@ model Zone {
   gares    Gare[]
   tarifs   TarifBillet[]
   tarifsLocation TarifLocation[]
+  tarifsMarchandise TarifMarchandise[]
   locations Location[]
   billets  Billet[]
   // Arret.zoneGeographique / zoneTarif sont des marqueurs libres ("Z2/3",
@@ -174,6 +184,21 @@ model TarifLocation {
 
   @@unique([type, zoneId, cle])
   @@map("tarifs_location")
+}
+
+// Tarifs marchandises validés (Ar par kg) — catégorie → zone.
+model TarifMarchandise {
+  id        String               @id @default(cuid())
+  categorie CategorieMarchandise
+  zoneId    String
+  zone      Zone                 @relation(fields: [zoneId], references: [id])
+  tarifKg   Decimal              @db.Decimal(12, 2) // Ariary par kilogramme
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([categorie, zoneId])
+  @@map("tarifs_marchandise")
 }
 
 model Train {

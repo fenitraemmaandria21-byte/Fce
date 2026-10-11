@@ -129,7 +129,7 @@ const SECTIONS = [
     points: [
       'Administration → Utilisateurs : créer un compte, définir le rôle, activer/désactiver.',
       'Administration → Journal : historique des connexions et opérations (ADMIN/SUPERADMIN).',
-      'Administration → Paramètres : réservé au SUPERADMIN.',
+      'Administration → Paramètres : référentiels FCE (gares, arrêts, tarifs billets/marchandises/locations, trains, voitures, wagons).',
     ],
   },
   {

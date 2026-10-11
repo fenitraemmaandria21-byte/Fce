@@ -373,6 +373,108 @@ async function supprimerTarifLocation(id, appelant) {
   });
 }
 
+async function listerTarifsMarchandise(req) {
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const where = {};
+    if (actif(req.query.categorie)) where.categorie = req.query.categorie;
+    const donnees = await prisma.tarifMarchandise.findMany({
+      where,
+      include: { zone: { select: { code: true } } },
+      orderBy: [{ categorie: 'asc' }, { zone: { code: 'asc' } }],
+    });
+    return {
+      donnees: donnees.map((t) => ({
+        id: t.id,
+        categorie: t.categorie,
+        zone: t.zone,
+        tarifKg: Number(t.tarifKg),
+      })),
+    };
+  });
+}
+
+function validerTarifKg(tarifKg) {
+  if (tarifKg === undefined || tarifKg === null || tarifKg === '') {
+    throw new ApiError(400, 'TARIF_REQUIS', 'Le tarif au kg est requis');
+  }
+  const valeur = Number.parseFloat(tarifKg);
+  if (Number.isNaN(valeur)) {
+    throw new ApiError(400, 'TARIF_INVALIDE', 'Le tarif au kg est invalide');
+  }
+  if (valeur < 0) throw new ApiError(400, 'TARIF_INVALIDE', 'Le tarif au kg doit être positif');
+  return valeur;
+}
+
+// PUT /api/tarifs/marchandise/:id — SUPERADMIN uniquement.
+async function modifierTarifMarchandise(id, donnees, appelant) {
+  if (!appelant || appelant.role !== 'SUPERADMIN') {
+    throw new ApiError(403, 'ACCES_REFUSE', 'Réservé au SUPERADMIN');
+  }
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const existant = await prisma.tarifMarchandise.findUnique({
+      where: { id },
+      include: { zone: { select: { code: true } } },
+    });
+    if (!existant) throw new ApiError(404, 'TARIF_INTROUVABLE', 'Tarif introuvable');
+
+    const tarifKg = validerTarifKg(donnees?.tarifKg);
+    const tarif = await prisma.tarifMarchandise.update({
+      where: { id },
+      data: { tarifKg },
+      include: { zone: { select: { code: true } } },
+    });
+
+    await journaliser({
+      utilisateurId: appelant.id,
+      action: 'MODIFICATION_TARIF',
+      entite: 'TarifMarchandise',
+      entiteId: id,
+      details: {
+        categorie: tarif.categorie,
+        zone: tarif.zone.code,
+        avant: Number(existant.tarifKg),
+        apres: tarifKg,
+      },
+    });
+
+    return {
+      id: tarif.id,
+      categorie: tarif.categorie,
+      zone: tarif.zone,
+      tarifKg: Number(tarif.tarifKg),
+    };
+  });
+}
+
+// DELETE /api/tarifs/marchandise/:id — SUPERADMIN uniquement.
+async function supprimerTarifMarchandise(id, appelant) {
+  if (!appelant || appelant.role !== 'SUPERADMIN') {
+    throw new ApiError(403, 'ACCES_REFUSE', 'Réservé au SUPERADMIN');
+  }
+  return dbCall(async () => {
+    const prisma = getPrisma();
+    const existant = await prisma.tarifMarchandise.findUnique({
+      where: { id },
+      include: { zone: { select: { code: true } } },
+    });
+    if (!existant) throw new ApiError(404, 'TARIF_INTROUVABLE', 'Tarif introuvable');
+
+    await prisma.tarifMarchandise.delete({ where: { id } });
+
+    await journaliser({
+      utilisateurId: appelant.id,
+      action: 'SUPPRESSION_TARIF',
+      entite: 'TarifMarchandise',
+      entiteId: id,
+      details: { categorie: existant.categorie, zone: existant.zone.code },
+    });
+
+    return { id, categorie: existant.categorie, zone: existant.zone.code };
+  });
+}
+
 async function listerTrains() {
   return dbCall(async () => {
     const prisma = getPrisma();
@@ -802,6 +904,9 @@ module.exports = {
   modifierTarifLocation,
   supprimerTarifBillet,
   supprimerTarifLocation,
+  listerTarifsMarchandise,
+  modifierTarifMarchandise,
+  supprimerTarifMarchandise,
   listerTrains,
   creerTrain,
   modifierTrain,

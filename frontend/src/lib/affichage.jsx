@@ -47,6 +47,26 @@ export const LIBELLES_FORMULE = {
   JOURNEE: 'Journée (06:30 – 18:00)',
 }
 
+// Catégories de marchandise pour le tarif au kg (Ar/kg).
+export const LIBELLES_CATEGORIE_MARCHANDISE = {
+  PPN: 'PPN',
+  CARBURANT_MAJORE_SANS_TVA: 'Carburant majoré 50% (sans TVA)',
+  CARBURANT_MAJORE_AVEC_TVA: 'Carburant majoré 50% (avec TVA)',
+  DIVERS: 'Divers',
+  DIVERS_ENCOMBRANTS: 'Divers encombrants majoré 25%',
+}
+
+const nfTarif = new Intl.NumberFormat('fr-FR', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+})
+
+// Tarif au kilogramme : 166.67 → "166,67 Ar/kg".
+export function formatTarifKg(montant) {
+  if (montant === null || montant === undefined) return '—'
+  return `${nfTarif.format(montant)} Ar/kg`
+}
+
 export const LIBELLES_CATEGORIE = {
   ADULTE: 'Adulte',
   ENFANT: 'Enfant',

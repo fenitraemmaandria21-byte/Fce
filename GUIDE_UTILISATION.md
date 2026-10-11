@@ -65,7 +65,7 @@ ils alimentent les calculs (tarifs, capacités).
 |---|---|
 | **Gares** | Liste des gares desservies |
 | **Arrêts** | Points d'arrêt (ex. PK102, PK115, PK123) |
-| **Tarifs** | Tarifs billets et locations |
+| **Tarifs** | Tarifs billets, tarifs marchandises (Ar/kg, par catégorie et zone) et tarifs locations |
 | **Trains** | Parc de trains |
 | **Voitures** | Voitures par train |
 | **Wagons** | Wagons par série |
