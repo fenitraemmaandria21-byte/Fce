@@ -174,6 +174,13 @@ async function statsMarchandises(req) {
       _sum: { poidsTotal: true, nombreColis: true },
     });
 
+    // Recette marchandises = montant des BRAN (envois facturés), par dateBran,
+    // comme le module Caisse et le tableau de bord.
+    const totalRecette = await prisma.bran.aggregate({
+      where: { dateBran: { gte: de, lte: au } },
+      _sum: { montantTotal: true },
+    });
+
     const parDestination = await prisma.envoi.groupBy({
       by: ['gareDestinationId'],
       where: { ...where, gareDestinationId: { not: null } },
@@ -182,22 +189,48 @@ async function statsMarchandises(req) {
     const gares = await prisma.gare.findMany({ select: { id: true, code: true } });
     const gareMap = new Map(gares.map((g) => [g.id, g.code]));
 
+    // Montant marchandises (BRAN) par destination, sur la période (dateBran).
+    const montantsParDestination = await prisma.$queryRaw`
+      SELECT e."gareDestinationId" AS destinationid,
+             COALESCE(SUM(b."montantTotal"), 0)::int AS montant
+      FROM "bran" b
+      JOIN "envois" e ON e."id" = b."envoiId"
+      WHERE b."dateBran" >= ${de} AND b."dateBran" <= ${au}
+            AND e."gareDestinationId" IS NOT NULL
+      GROUP BY 1`;
+    const montantParId = new Map(
+      montantsParDestination.map((r) => [r.destinationid, Number(r.montant)])
+    );
+
+    const destinations = new Map();
+    for (const r of parDestination) {
+      const cle = gareMap.get(r.gareDestinationId) || '—';
+      const entree = destinations.get(cle) || { destination: cle, nombre: 0, montant: 0 };
+      entree.nombre += r._count._all;
+      destinations.set(cle, entree);
+    }
+    for (const [id, montant] of montantParId) {
+      const cle = gareMap.get(id) || '—';
+      const entree = destinations.get(cle) || { destination: cle, nombre: 0, montant: 0 };
+      entree.montant += montant;
+      destinations.set(cle, entree);
+    }
+    const parDestinationFinal = [...destinations.values()].sort((a, b) =>
+      a.destination.localeCompare(b.destination)
+    );
+
     return {
       periode: { de, au },
       total: {
         nombre: total._count._all,
         poidsTotal: total._sum.poidsTotal ? Number(total._sum.poidsTotal) : 0,
         colisTotal: total._sum.nombreColis || 0,
+        montant: totalRecette._sum.montantTotal || 0,
       },
       parMois: reponseOuVide(
         parMois.map((r) => ({ ...r, nombre: Number(r.nombre), poids: Number(r.poids) }))
       ),
-      parDestination: reponseOuVide(
-        parDestination.map((r) => ({
-          destination: gareMap.get(r.gareDestinationId) || '—',
-          nombre: r._count._all,
-        }))
-      ),
+      parDestination: reponseOuVide(parDestinationFinal),
     };
   });
 }
@@ -338,7 +371,10 @@ async function statsRecettes(req) {
         billetterie: totalBillets._sum.tarif || 0,
         location: totalLocations._sum.montant || 0,
         marchandises: totalMarchandises._sum.montantTotal || 0,
-        cumul: (totalBillets._sum.tarif || 0) + (totalLocations._sum.montant || 0),
+        cumul:
+          (totalBillets._sum.tarif || 0) +
+          (totalLocations._sum.montant || 0) +
+          (totalMarchandises._sum.montantTotal || 0),
       },
       parMois: reponseOuVide(
         parMois.map((r) => ({

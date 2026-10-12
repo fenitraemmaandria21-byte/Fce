@@ -120,8 +120,12 @@ export default function Statistiques({ sansTitre = false }) {
       feuilles.push({
         titre: 'Marchandises',
         lignes: [
-          ['Destination', 'Nombre'],
-          ...marchandises.donnees.parDestination.donnees.map((l) => [l.destination, l.nombre]),
+          ['Destination', 'Nombre', 'Montant (Ar)'],
+          ...marchandises.donnees.parDestination.donnees.map((l) => [
+            l.destination,
+            l.nombre,
+            l.montant,
+          ]),
         ],
       })
     }
@@ -151,11 +155,12 @@ export default function Statistiques({ sansTitre = false }) {
       feuilles.push({
         titre: 'Recettes',
         lignes: [
-          ['Mois', 'Billetterie (Ar)', 'Locations (Ar)', 'Total (Ar)'],
+          ['Mois', 'Billetterie (Ar)', 'Locations (Ar)', 'Marchandises (Ar)', 'Total (Ar)'],
           ...recettes.donnees.parMois.donnees.map((l) => [
             formaterMois(l.mois),
             l.billets,
             l.locations,
+            l.marchandises,
             l.total,
           ]),
         ],
@@ -240,8 +245,9 @@ export default function Statistiques({ sansTitre = false }) {
           <CardContent className="space-y-3">
             {appelReussi(marchandises) ? (
               <>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <InfoStat libelle="Envois" valeur={formatNombre(marchandises.donnees.total.nombre)} />
+                  <InfoStat libelle="Recette" valeur={formatArgent(marchandises.donnees.total.montant)} />
                   <InfoStat libelle="Colis" valeur={formatNombre(marchandises.donnees.total.colisTotal)} />
                   <InfoStat libelle="Poids" valeur={`${formatNombre(marchandises.donnees.total.poidsTotal)} kg`} />
                 </div>
@@ -251,6 +257,7 @@ export default function Statistiques({ sansTitre = false }) {
                   colonnes={[
                     { titre: 'Destination', cle: 'destination', tronquer: true },
                     { titre: 'Nombre', align: 'right', rendre: (l) => formatNombre(l.nombre) },
+                    { titre: 'Montant', align: 'right', rendre: (l) => formatArgent(l.montant) },
                   ]}
                 />
               </>
@@ -318,14 +325,15 @@ export default function Statistiques({ sansTitre = false }) {
 
         <Card className="sm:col-span-2 lg:col-span-2">
           <CardHeader>
-            <TitreCarte couleur="bg-fce-500">Recettes (billetterie + locations)</TitreCarte>
+            <TitreCarte couleur="bg-fce-500">Recettes (billetterie + locations + marchandises)</TitreCarte>
           </CardHeader>
           <CardContent className="space-y-3">
             {appelReussi(recettes) ? (
               <>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <InfoStat libelle="Billetterie" valeur={formatArgent(recettes.donnees.total.billetterie)} />
                   <InfoStat libelle="Locations" valeur={formatArgent(recettes.donnees.total.location)} />
+                  <InfoStat libelle="Marchandises" valeur={formatArgent(recettes.donnees.total.marchandises)} />
                   <InfoStat libelle="Cumul" valeur={formatArgent(recettes.donnees.total.cumul)} />
                 </div>
                 <LigneVide donnees={recettes.donnees.parMois?.donnees} />
@@ -335,6 +343,7 @@ export default function Statistiques({ sansTitre = false }) {
                     { titre: 'Mois', rendre: (l) => formaterMois(l.mois) },
                     { titre: 'Billets', align: 'right', rendre: (l) => formatArgent(l.billets) },
                     { titre: 'Locations', align: 'right', rendre: (l) => formatArgent(l.locations) },
+                    { titre: 'Marchandises', align: 'right', rendre: (l) => formatArgent(l.marchandises) },
                     { titre: 'Total', align: 'right', rendre: (l) => <span className="font-medium tabular-nums">{formatArgent(l.total)}</span> },
                   ]}
                 />
