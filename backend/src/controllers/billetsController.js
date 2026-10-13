@@ -9,6 +9,10 @@ const recuperer = asyncHandler(async (req, res) => {
   res.json(await billetsService.recuperer(req.params.id));
 });
 
+const occupation = asyncHandler(async (req, res) => {
+  res.json(await billetsService.occupation(req.query));
+});
+
 
 const creer = asyncHandler(async (req, res) => {
   res.status(201).json(await billetsService.creer(req.body, req.utilisateur));
@@ -26,4 +30,4 @@ const supprimer = asyncHandler(async (req, res) => {
   res.json(await billetsService.supprimer(req.params.id, req.utilisateur));
 });
 
-module.exports = { lister, recuperer, creer, modifier, annuler, supprimer };
+module.exports = { lister, recuperer, creer, modifier, annuler, supprimer, occupation };

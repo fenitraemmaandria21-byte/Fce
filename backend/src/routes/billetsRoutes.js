@@ -8,6 +8,7 @@ const billetsController = require('../controllers/billetsController');
 router.use(requireAuth);
 
 router.get('/', billetsController.lister);
+router.get('/occupation', billetsController.occupation);
 router.get('/:id', billetsController.recuperer);
 
 // Écriture : SUPERADMIN, ADMIN, AGENT (AGENT enregistre les ventes)

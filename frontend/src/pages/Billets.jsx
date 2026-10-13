@@ -1,4 +1,4 @@
-import { FileDown, Pencil, Plus, Printer, Trash2 } from 'lucide-react'
+import { Armchair, FileDown, Pencil, Plus, Printer, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
 import { z } from 'zod'
@@ -7,6 +7,7 @@ import { jsPDF } from 'jspdf'
 
 import DialogueFormulaire from '@/components/DialogueFormulaire'
 import PageTable from '@/components/PageTable'
+import PlanPlaces from '@/components/PlanPlaces'
 import TicketBillet from '@/components/TicketBillet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -103,6 +104,7 @@ export default function Billets() {
   const [edition, setEdition] = useState(null)
   const [aImprimer, setAImprimer] = useState(null)
   const [aExporter, setAExporter] = useState(null)
+  const [planOuvert, setPlanOuvert] = useState(false)
   const rechargerRef = useRef(null)
 
   // Impression du billet au format physique 80 × 150 mm.
@@ -182,6 +184,9 @@ export default function Billets() {
   const voituresDeLaClasse = formulaire.classe
     ? listeVoitures.filter((v) => v.classe === formulaire.classe)
     : []
+
+  const voitureSelectionnee = listeVoitures.find((v) => v.id === formulaire.voitureId) || null
+  const peutVoirPlaces = Boolean(voitureSelectionnee && formulaire.dateVoyage)
 
   const apercuTarif = (() => {
     const gare = listeGares.find((g) => g.id === formulaire.destinationId)
@@ -446,6 +451,7 @@ export default function Billets() {
                   onValueChange={(v) => {
                     modifierChamp('classe', v)
                     modifierChamp('voitureId', 'aucune')
+                    modifierChamp('place', '')
                   }}
                 >
                   <SelectTrigger>
@@ -513,7 +519,10 @@ export default function Billets() {
                 <Input
                   type="date"
                   value={formulaire.dateVoyage}
-                  onChange={(e) => modifierChamp('dateVoyage', e.target.value)}
+                  onChange={(e) => {
+                    modifierChamp('dateVoyage', e.target.value)
+                    modifierChamp('place', '')
+                  }}
                 />
                 {erreurs.dateVoyage && (
                   <p className="text-sm text-destructive">{erreurs.dateVoyage}</p>
@@ -545,7 +554,10 @@ export default function Billets() {
                 <Label>Voiture (optionnel)</Label>
                 <Select
                   value={formulaire.voitureId}
-                  onValueChange={(v) => modifierChamp('voitureId', v)}
+                  onValueChange={(v) => {
+                    modifierChamp('voitureId', v)
+                    modifierChamp('place', '')
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -559,9 +571,40 @@ export default function Billets() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  Seules les voitures de la classe choisie sont proposées.
-                </p>
+                {!voitureSelectionnee && (
+                  <p className="text-xs text-muted-foreground">
+                    Seules les voitures de la classe choisie sont proposées.
+                  </p>
+                )}
+                {voitureSelectionnee && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPlanOuvert(true)}
+                      disabled={!peutVoirPlaces}
+                    >
+                      <Armchair className="size-4" />
+                      Voir les places
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {formulaire.place ? (
+                        <>
+                          Place choisie :{' '}
+                          <span className="font-medium text-foreground">{formulaire.place}</span>
+                        </>
+                      ) : (
+                        'Aucune place choisie'
+                      )}
+                    </span>
+                  </div>
+                )}
+                {voitureSelectionnee && !formulaire.dateVoyage && (
+                  <p className="text-xs text-muted-foreground">
+                    Renseignez la date de voyage pour afficher les places disponibles.
+                  </p>
+                )}
               </div>
             </div>
           </DialogueFormulaire>
@@ -742,6 +785,14 @@ export default function Billets() {
           <TicketBillet billet={aExporter} />
         </div>
       )}
+      <PlanPlaces
+        ouvert={planOuvert}
+        onFermer={() => setPlanOuvert(false)}
+        voiture={voitureSelectionnee}
+        dateVoyage={formulaire.dateVoyage}
+        placeSelectionnee={formulaire.place}
+        onChoisir={(numero) => modifierChamp('place', numero)}
+      />
     </div>
   )
 }

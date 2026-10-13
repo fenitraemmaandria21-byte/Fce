@@ -108,6 +108,80 @@ async function verifierVoiture(prisma, voitureId, classe) {
   return voiture;
 }
 
+// Bornes de la journée (UTC) pour une date de voyage donnée.
+function bornesJour(dateVoyage) {
+  const debut = new Date(dateVoyage);
+  debut.setUTCHours(0, 0, 0, 0);
+  const fin = new Date(debut);
+  fin.setUTCHours(23, 59, 59, 999);
+  return { debut, fin };
+}
+
+// Une place d'une voiture est occupée, pour une date de voyage donnée, dès
+// qu'un billet VENDU y est rattaché. La portée (voiture + date) correspond à
+// la ressource physique « siège du wagon ».
+async function verifierPlaceLibre(prisma, { voitureId, dateVoyage, place, excludeId }) {
+  if (!voitureId || !place) return;
+  const { debut, fin } = bornesJour(dateVoyage);
+  const conflit = await prisma.billet.findFirst({
+    where: {
+      voitureId,
+      statut: 'VENDU',
+      place: String(place),
+      dateVoyage: { gte: debut, lte: fin },
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+    select: { numero: true, numeroSerie: true },
+  });
+  if (conflit) {
+    throw new ApiError(
+      409,
+      'PLACE_OCCUPEE',
+      `La place ${place} est déjà occupée sur cette voiture à cette date.`
+    );
+  }
+}
+
+// GET /api/billets/occupation — état des places d'une voiture à une date.
+// Retourne la capacité de la voiture et la liste des places déjà vendues.
+async function occupation({ voitureId, dateVoyage, excludeId }) {
+  return dbCall(async () => {
+    if (!voitureId) throw new ApiError(400, 'VOITURE_REQUISE', 'Voiture requise');
+    if (!dateVoyage) throw new ApiError(400, 'DATE_REQUISE', 'Date de voyage requise');
+
+    const prisma = getPrisma();
+    const voiture = await prisma.voiture.findUnique({ where: { id: voitureId } });
+    if (!voiture) throw new ApiError(404, 'VOITURE_INTROUVE', 'Voiture introuvable');
+
+    const { debut, fin } = bornesJour(dateVoyage);
+    const billets = await prisma.billet.findMany({
+      where: {
+        voitureId,
+        statut: 'VENDU',
+        place: { not: null },
+        dateVoyage: { gte: debut, lte: fin },
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      select: { place: true },
+    });
+
+    const placesOccupees = [
+      ...new Set(billets.map((b) => Number(b.place)).filter((n) => Number.isFinite(n))),
+    ].sort((a, b) => a - b);
+
+    return {
+      voiture: {
+        id: voiture.id,
+        code: voiture.code,
+        places: voiture.places,
+        classe: voiture.classe,
+      },
+      dateVoyage: new Date(dateVoyage),
+      placesOccupees,
+    };
+  });
+}
+
 // Numérotation validée : FCE-<année>-<séquence annuelle à 6 chiffres>.
 async function prochainNumero(prisma, dateVoyage) {
   const annee = new Date(dateVoyage).getUTCFullYear();
@@ -152,6 +226,11 @@ async function creer(donnees, appelant) {
     const { gare, montant } = await resoudreTarif(prisma, donnees);
     const train = await verifierTrain(prisma, donnees.trainId, donnees.dateVoyage);
     const voiture = await verifierVoiture(prisma, donnees.voitureId, donnees.classe);
+    await verifierPlaceLibre(prisma, {
+      voitureId: voiture ? voiture.id : null,
+      dateVoyage: donnees.dateVoyage,
+      place: donnees.place,
+    });
 
     // Règle J-1 (vente) : sémantique non fournie → REGLE_A_CONFIRMER.
     // Aucune vérification de date n'est appliquée tant que la règle n'est pas
@@ -223,6 +302,12 @@ async function modifier(id, donnees, appelant) {
     const { gare, montant } = await resoudreTarif(prisma, donnees);
     const train = await verifierTrain(prisma, donnees.trainId, donnees.dateVoyage);
     const voiture = await verifierVoiture(prisma, donnees.voitureId, donnees.classe);
+    await verifierPlaceLibre(prisma, {
+      voitureId: voiture ? voiture.id : null,
+      dateVoyage: donnees.dateVoyage,
+      place: donnees.place,
+      excludeId: id,
+    });
 
     const billet = await prisma.billet.update({
       where: { id },
@@ -404,4 +489,4 @@ async function supprimer(id, appelant) {
   });
 }
 
-module.exports = { creer, modifier, lister, recuperer, annuler, supprimer };
+module.exports = { creer, modifier, lister, recuperer, annuler, supprimer, occupation };
