@@ -40,6 +40,7 @@ const VENTE_VIDE = {
   typeIdentite: 'CIN',
   categorie: 'ADULTE',
   destinationId: '',
+  zoneId: '',
   classe: 'PREMIERE_CLASSE',
   dateVoyage: '',
   trainId: 'aucun',
@@ -50,10 +51,11 @@ const VENTE_VIDE = {
 const venteSchema = z
   .object({
     voyageurNom: z.string().trim().min(2, 'Nom du voyageur requis').max(120),
-    voyageurIdentite: z.string().trim().min(1, 'Numéro de pièce requis').max(40),
+    voyageurIdentite: z.string().trim().max(40),
     typeIdentite: z.enum(['CIN', 'PASSEPORT']),
     categorie: z.enum(['ADULTE', 'ENFANT']),
     destinationId: z.string().min(1, 'Gare de destination requise'),
+    zoneId: z.string().min(1, 'Zone requise'),
     classe: z.enum(['PREMIERE_CLASSE', 'RESERVATION_RESIDENT', 'RESERVATION_NON_RESIDENT']),
     dateVoyage: z.string().min(1, 'Date de voyage requise'),
     trainId: z.string().optional(),
@@ -61,6 +63,13 @@ const venteSchema = z
     place: z.string().trim().max(20).optional(),
   })
   .superRefine((valeur, ctx) => {
+    if (valeur.categorie !== 'ENFANT' && !valeur.voyageurIdentite) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['voyageurIdentite'],
+        message: 'Numéro de pièce requis',
+      })
+    }
     if (valeur.classe === 'RESERVATION_RESIDENT' && valeur.typeIdentite !== 'CIN') {
       ctx.addIssue({
         code: 'custom',
@@ -102,10 +111,30 @@ export default function Billets() {
   }, [aImprimer])
 
   const gares = useApi('/gares', { limit: 100 })
+  const zones = useApi('/zones')
   const trains = useApi('/trains')
   const voitures = useApi('/voitures')
+  const tarifsBillet = useApi('/tarifs/billets')
 
   const versDateInput = (iso) => (iso ? new Date(iso).toISOString().slice(0, 10) : '')
+
+  const listeGares = gares.donnees?.donnees || []
+  const listeZones = zones.donnees?.donnees || []
+  const listeTarifs = tarifsBillet.donnees?.donnees || []
+
+  const garesDeLaZone = formulaire.zoneId
+    ? listeGares.filter((g) => g.zoneId === formulaire.zoneId)
+    : []
+
+  const apercuTarif = (() => {
+    const gare = listeGares.find((g) => g.id === formulaire.destinationId)
+    if (!gare?.zoneId || !formulaire.classe) return null
+    const tarif = listeTarifs.find(
+      (t) => t.zoneId === gare.zoneId && t.classe === formulaire.classe
+    )
+    if (!tarif) return null
+    return formulaire.categorie === 'ENFANT' ? tarif.montant / 2 : tarif.montant
+  })()
 
   const ouvrirVente = () => {
     setEdition(null)
@@ -127,6 +156,7 @@ export default function Billets() {
         typeIdentite: data.typeIdentite || 'CIN',
         categorie: data.categorie || 'ADULTE',
         destinationId: data.destinationId || data.destination?.id || '',
+        zoneId: data.zoneId || '',
         classe: data.classe || 'PREMIERE_CLASSE',
         dateVoyage: versDateInput(data.dateVoyage),
         trainId: data.trainId || 'aucun',
@@ -236,7 +266,7 @@ export default function Billets() {
     <div className="space-y-4">
       <PageTable
         titre="Billetterie"
-        description="Vente de billets : la zone est déduite automatiquement de la destination. Enfant : demi-tarif (6 250 Ar). Numéro généré automatiquement (FCE-<année>-<séquence>)."
+        description="Vente de billets : choisir la zone puis la gare de destination (la gare doit appartenir à la zone). Enfant : demi-tarif appliqué automatiquement (montant / 2 de la classe et de la zone). Numéro généré automatiquement (FCE-<année>-<séquence>)."
         endpoint="/billets"
         libelleNombre="billet(s)"
         placeholderRecherche="Rechercher (n°, voyageur, pièce)…"
@@ -254,7 +284,7 @@ export default function Billets() {
               </>
             }
             titre={edition ? 'Modifier le billet' : 'Vendre un billet'}
-            description="Tarif appliqué automatiquement d’après la destination, le type de voyageur et la classe."
+            description="Tarif appliqué automatiquement d’après la zone, la destination, le type de voyageur et la classe."
             messageErreur={erreurGlobale}
             enCours={enCours}
             onSoumettre={soumettreVente}
@@ -291,21 +321,46 @@ export default function Billets() {
                 </Select>
                 {formulaire.categorie === 'ENFANT' && (
                   <p className="text-xs text-muted-foreground">
-                    Enfant : demi-tarif appliqué (6 250 Ar).
+                    Enfant : demi-tarif appliqué automatiquement d’après la classe et la zone.
                   </p>
                 )}
+              </div>
+              <div className="space-y-2">
+                <Label>Zone</Label>
+                <Select
+                  value={formulaire.zoneId}
+                  onValueChange={(v) => {
+                    modifierChamp('zoneId', v)
+                    modifierChamp('destinationId', '')
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir une zone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {listeZones.map((z) => (
+                      <SelectItem key={z.id} value={z.id}>
+                        {z.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {erreurs.zoneId && <p className="text-sm text-destructive">{erreurs.zoneId}</p>}
               </div>
               <div className="space-y-2">
                 <Label>Gare de destination</Label>
                 <Select
                   value={formulaire.destinationId}
                   onValueChange={(v) => modifierChamp('destinationId', v)}
+                  disabled={!formulaire.zoneId}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Choisir une gare" />
+                    <SelectValue
+                      placeholder={formulaire.zoneId ? 'Choisir une gare' : 'Choisir une zone d’abord'}
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {(gares.donnees?.donnees || []).map((g) => (
+                    {garesDeLaZone.map((g) => (
                       <SelectItem key={g.id} value={g.id}>
                         {g.code} — {g.nom || 'gare'}
                       </SelectItem>
@@ -334,11 +389,24 @@ export default function Billets() {
                   </SelectContent>
                 </Select>
               </div>
+              {apercuTarif !== null && apercuTarif !== undefined && (
+                <div className="sm:col-span-2 flex items-center justify-between rounded-lg border bg-muted/40 p-3 text-sm">
+                  <span className="text-muted-foreground">
+                    {formulaire.categorie === 'ENFANT'
+                      ? 'Tarif Enfant — demi-tarif (classe + zone)'
+                      : 'Tarif Adulte (classe + zone)'}
+                  </span>
+                  <span className="text-lg font-semibold tabular-nums">
+                    {formatArgent(apercuTarif)}
+                  </span>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Pièce d’identité</Label>
                 <Select
                   value={formulaire.typeIdentite}
                   onValueChange={(v) => modifierChamp('typeIdentite', v)}
+                  disabled={formulaire.categorie === 'ENFANT'}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -348,6 +416,11 @@ export default function Billets() {
                     <SelectItem value="PASSEPORT">Passeport</SelectItem>
                   </SelectContent>
                 </Select>
+                {formulaire.categorie === 'ENFANT' && (
+                  <p className="text-xs text-muted-foreground">
+                    Enfant : la pièce d’identité ne s’applique pas.
+                  </p>
+                )}
                 {erreurs.typeIdentite && (
                   <p className="text-sm text-destructive">{erreurs.typeIdentite}</p>
                 )}
@@ -358,6 +431,7 @@ export default function Billets() {
                   value={formulaire.voyageurIdentite}
                   onChange={(e) => modifierChamp('voyageurIdentite', e.target.value)}
                   placeholder="N° CIN ou passeport"
+                  disabled={formulaire.categorie === 'ENFANT'}
                 />
                 {erreurs.voyageurIdentite && (
                   <p className="text-sm text-destructive">{erreurs.voyageurIdentite}</p>

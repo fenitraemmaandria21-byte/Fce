@@ -98,10 +98,11 @@ export const LIBELLES_TYPE_IDENTITE = {
 }
 
 // Libellés métier des paramètres système — masquent la clé technique.
+// NB : pas de paramètre « Demi-tarif » — le demi-tarif enfant est calculé
+// automatiquement à partir du tarif normal de la zone/classe (montant / 2).
 export const LIBELLES_PARAMETRE = {
   CAPACITE_DRAISINE: 'Capacité draisine',
   CAPACITE_MACHINE: 'Capacité machine',
-  DEMI_TARIF_BILLET: 'Demi-tarif billet',
   REGLE_ANNULATION_BILLET: 'Règle annulation billet',
   NUMEROTATION_BILLET: 'Numérotation des billets',
   CAPACITE_MAX_TRAIN_MARCHANDISES: 'Capacité train marchandises',

@@ -8,8 +8,9 @@ const notificationsService = require('./notificationsService');
 
 // ------------------------------------------------------------
 // BILLETTERIE
-// Chaîne tarifaire imposée (l'agent ne saisit JAMAIS la zone) :
-//   DESTINATION → ZONE → TYPE VOYAGEUR → CLASSE → TARIF
+// Chaîne tarifaire : ZONE → DESTINATION → TYPE VOYAGEUR → CLASSE → TARIF
+// La zone sélectionnée au formulaire doit correspondre à la zone de la
+// gare de destination (contrôle de cohérence, jamais inventé).
 // ------------------------------------------------------------
 
 const JOURS_FR = [
@@ -27,13 +28,22 @@ function jourSemaine(date) {
 }
 
 // Résolution destination → zone → tarif.
-// ENFANT : demi-tarif — montant non validé (6 250 / 6 300 Ar) → 409.
-async function resoudreTarif(prisma, { destinationId, classe, categorie }) {
+// ENFANT : demi-tarif calculé automatiquement (montant / 2) d'après la zone
+// et la classe choisies. Montant impair (demi non entier) → 409.
+async function resoudreTarif(prisma, { destinationId, zoneId, classe, categorie }) {
   const gare = await prisma.gare.findUnique({
     where: { id: destinationId },
     include: { zone: true },
   });
   if (!gare) throw new ApiError(404, 'GARE_INTROUVE', 'Gare de destination introuvable');
+
+  if (zoneId && gare.zoneId !== zoneId) {
+    throw new ApiError(
+      400,
+      'ZONE_INCOHERENTE',
+      "La gare de destination n'appartient pas à la zone sélectionnée"
+    );
+  }
 
   const tarif = await prisma.tarifBillet.findUnique({
     where: { zoneId_classe: { zoneId: gare.zoneId, classe } },
@@ -41,18 +51,14 @@ async function resoudreTarif(prisma, { destinationId, classe, categorie }) {
   if (!tarif) throw new ApiError(404, 'TARIF_INTROUVE', 'Tarif non configuré pour cette zone/classe');
 
   if (categorie === 'ENFANT') {
-    const param = await prisma.parametreSysteme.findUnique({
-      where: { cle: 'DEMI_TARIF_BILLET' },
-    });
-    const valeur = param ? param.valeur : 'CONFIGURATION_A_VALIDER';
-    if (!/^\d+$/.test(valeur)) {
+    if (tarif.montant % 2 !== 0) {
       throw new ApiError(
         409,
         'CONFIGURATION_A_VALIDER',
-        'Demi-tarif enfant non validé (6 250 Ar ou 6 300 Ar) — CONFIGURATION_A_VALIDER'
+        `Demi-tarif enfant non validé (tarif ${tarif.montant} Ar impair pour la zone/classe choisies) — CONFIGURATION_A_VALIDER`
       );
     }
-    return { gare, montant: parseInt(valeur, 10) };
+    return { gare, montant: tarif.montant / 2 };
   }
 
   return { gare, montant: tarif.montant };
@@ -120,7 +126,7 @@ async function creer(donnees, appelant) {
       typeIdentite: donnees.typeIdentite,
       categorie: donnees.categorie,
       destinationId: gare.id,
-      zoneId: gare.zoneId, // déduit de la destination — jamais saisi par l'agent
+      zoneId: gare.zoneId, // conforme à la zone sélectionnée (contrôlé ci-dessus)
       classe: donnees.classe,
       tarif: montant,
       dateVoyage: new Date(donnees.dateVoyage),

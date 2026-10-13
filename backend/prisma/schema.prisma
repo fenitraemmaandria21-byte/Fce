@@ -36,11 +36,13 @@ enum ClasseBillet {
 
 // Pièce d'identité : résident → CIN, non-résident → passeport.
 enum TypeIdentite {
+  DATE_NAISSANCE
   CIN
   PASSEPORT
 }
 
-// Règle validée : enfant < 12 ans → demi-tarif (montant = CONFIGURATION_A_VALIDER).
+// Règle validée : enfant < 12 ans → demi-tarif calculé automatiquement
+// (montant / 2 du tarif normal de la zone/classe choisies).
 enum CategorieVoyageur {
   ADULTE
   ENFANT
@@ -325,7 +327,7 @@ model Billet {
   zoneId        String
   zone          Zone   @relation(fields: [zoneId], references: [id])
   classe        ClasseBillet
-  tarif         Int // montant appliqué (Ar) — enfant = CONFIGURATION_A_VALIDER
+  tarif         Int // montant appliqué (Ar) — enfant = demi-tarif (montant / 2)
 
   dateVoyage DateTime
   trainId     String?
