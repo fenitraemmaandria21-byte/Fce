@@ -316,6 +316,9 @@ model Billet {
   id     String @id @default(cuid())
   // Règle de numérotation non validée → REGLE_A_CONFIRMER (généré en Phase 9).
   numero String? @unique
+  // Numéro de série : <A|B|C|D><séquence à 4 chiffres>, préfixe = zone
+  // (Z1→A, Z2→B, Z3→C, Z4→D), compteur indépendant par zone. Ex. B3945.
+  numeroSerie String? @unique
 
   voyageurNom      String
   voyageurIdentite String // N° CIN ou passeport

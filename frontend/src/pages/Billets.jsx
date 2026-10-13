@@ -1,7 +1,9 @@
-import { Pencil, Plus, Printer, Trash2 } from 'lucide-react'
+import { FileDown, Pencil, Plus, Printer, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
 import { z } from 'zod'
+import html2canvas from 'html2canvas-pro'
+import { jsPDF } from 'jspdf'
 
 import DialogueFormulaire from '@/components/DialogueFormulaire'
 import PageTable from '@/components/PageTable'
@@ -19,6 +21,7 @@ import {
 import { useAuth } from '@/context/AuthContext'
 import { useApi } from '@/hooks/useApi'
 import { confirmerAction, confirmerSuppression } from '@/lib/confirmation'
+import { genererQrBillet } from '@/lib/billetQr'
 import api, { messageApi } from '@/services/api'
 import {
   BadgeStatut,
@@ -99,16 +102,65 @@ export default function Billets() {
   const [erreurGlobale, setErreurGlobale] = useState(null)
   const [edition, setEdition] = useState(null)
   const [aImprimer, setAImprimer] = useState(null)
+  const [aExporter, setAExporter] = useState(null)
   const rechargerRef = useRef(null)
 
+  // Impression du billet au format physique 80 × 150 mm.
   useEffect(() => {
     if (!aImprimer) return undefined
+    const style = document.createElement('style')
+    style.setAttribute('data-fce-ticket', '1')
+    style.textContent = '@media print { @page { size: 80mm 150mm; margin: 0 !important; } }'
+    document.head.appendChild(style)
     const minuteur = setTimeout(() => {
       window.print()
       setAImprimer(null)
-    }, 150)
-    return () => clearTimeout(minuteur)
+    }, 200)
+    return () => {
+      clearTimeout(minuteur)
+      style.remove()
+    }
   }, [aImprimer])
+
+  // Export PDF du billet (capture du rendu 80 × 150 mm).
+  useEffect(() => {
+    if (!aExporter) return undefined
+    let ignore = false
+    const executer = async () => {
+      try {
+        await new Promise((r) => setTimeout(r, 150))
+        const conteneur = document.getElementById('ticket-pdf')
+        const cible = conteneur?.firstElementChild
+        if (!cible) return
+        const canvas = await html2canvas(cible, {
+          scale: 3,
+          backgroundColor: '#ffffff',
+          useCORS: true,
+        })
+        const image = canvas.toDataURL('image/png')
+        const pdf = new jsPDF({ unit: 'mm', format: [80, 150], orientation: 'portrait' })
+        const ratio = canvas.width / canvas.height
+        let largeur = 80
+        let hauteur = largeur / ratio
+        if (hauteur > 150) {
+          hauteur = 150
+          largeur = hauteur * ratio
+        }
+        pdf.addImage(image, 'PNG', (80 - largeur) / 2, 0, largeur, hauteur)
+        const nom = aExporter.numeroSerie || aExporter.numero || aExporter.id
+        pdf.save(`billet-${nom}.pdf`)
+        toast.success('PDF du billet généré.')
+      } catch {
+        toast.error('Export PDF impossible')
+      } finally {
+        if (!ignore) setAExporter(null)
+      }
+    }
+    executer()
+    return () => {
+      ignore = true
+    }
+  }, [aExporter])
 
   const gares = useApi('/gares', { limit: 100 })
   const zones = useApi('/zones')
@@ -124,6 +176,11 @@ export default function Billets() {
 
   const garesDeLaZone = formulaire.zoneId
     ? listeGares.filter((g) => g.zoneId === formulaire.zoneId)
+    : []
+
+  const listeVoitures = voitures.donnees?.donnees || []
+  const voituresDeLaClasse = formulaire.classe
+    ? listeVoitures.filter((v) => v.classe === formulaire.classe)
     : []
 
   const apercuTarif = (() => {
@@ -216,9 +273,20 @@ export default function Billets() {
   const imprimer = async (l) => {
     try {
       const { data } = await api.get(`/billets/${l.id}`)
-      setAImprimer(data)
+      const _qr = await genererQrBillet(data)
+      setAImprimer({ ...data, _qr })
     } catch (erreur) {
       toast.error(messageApi(erreur, 'Impression impossible'))
+    }
+  }
+
+  const exporterPdf = async (l) => {
+    try {
+      const { data } = await api.get(`/billets/${l.id}`)
+      const _qr = await genererQrBillet(data)
+      setAExporter({ ...data, _qr })
+    } catch (erreur) {
+      toast.error(messageApi(erreur, 'Export PDF impossible'))
     }
   }
 
@@ -375,7 +443,10 @@ export default function Billets() {
                 <Label>Classe</Label>
                 <Select
                   value={formulaire.classe}
-                  onValueChange={(v) => modifierChamp('classe', v)}
+                  onValueChange={(v) => {
+                    modifierChamp('classe', v)
+                    modifierChamp('voitureId', 'aucune')
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -481,13 +552,16 @@ export default function Billets() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="aucune">Non affectée</SelectItem>
-                    {(voitures.donnees?.donnees || []).map((v) => (
+                    {voituresDeLaClasse.map((v) => (
                       <SelectItem key={v.id} value={v.id}>
                         {v.code} ({v.places} places)
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Seules les voitures de la classe choisie sont proposées.
+                </p>
               </div>
             </div>
           </DialogueFormulaire>
@@ -520,6 +594,13 @@ export default function Billets() {
             titre: 'N°',
             align: 'right',
             rendre: (l) => <span className="font-medium tabular-nums">{l.numero || '—'}</span>,
+          },
+          {
+            titre: 'Série',
+            align: 'right',
+            rendre: (l) => (
+              <span className="font-mono tabular-nums">{l.numeroSerie || '—'}</span>
+            ),
           },
           {
             titre: 'Voyageur',
@@ -569,6 +650,14 @@ export default function Billets() {
             >
               <Printer className="size-4" />
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Exporter en PDF"
+              onClick={() => exporterPdf(l)}
+            >
+              <FileDown className="size-4" />
+            </Button>
             {peutAnnuler && l.statut === 'VENDU' && (
               <Button
                 variant="ghost"
@@ -608,6 +697,9 @@ export default function Billets() {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-medium tabular-nums">{l.numero || '—'}</p>
+                {l.numeroSerie && (
+                  <p className="font-mono text-xs text-muted-foreground">Série {l.numeroSerie}</p>
+                )}
                 <p className="text-sm">
                   {l.voyageurNom}{' '}
                   <span className="text-muted-foreground">({l.voyageurIdentite})</span>
@@ -643,6 +735,11 @@ export default function Billets() {
       {aImprimer && (
         <div id="ticket-impression" className="zone-impression fixed left-[-10000px] top-0">
           <TicketBillet billet={aImprimer} />
+        </div>
+      )}
+      {aExporter && (
+        <div id="ticket-pdf" className="fixed left-[-10000px] top-0">
+          <TicketBillet billet={aExporter} />
         </div>
       )}
     </div>

@@ -93,6 +93,21 @@ async function verifierTrain(prisma, trainId, dateVoyage) {
   return train;
 }
 
+// La voiture sélectionnée doit obligatoirement appartenir à la classe choisie.
+async function verifierVoiture(prisma, voitureId, classe) {
+  if (!voitureId) return null;
+  const voiture = await prisma.voiture.findUnique({ where: { id: voitureId } });
+  if (!voiture) throw new ApiError(404, 'VOITURE_INTROUVE', 'Voiture introuvable');
+  if (voiture.classe !== classe) {
+    throw new ApiError(
+      400,
+      'VOITURE_CLASSE_INCOHERENTE',
+      "La voiture sélectionnée n'appartient pas à la classe choisie"
+    );
+  }
+  return voiture;
+}
+
 // Numérotation validée : FCE-<année>-<séquence annuelle à 6 chiffres>.
 async function prochainNumero(prisma, dateVoyage) {
   const annee = new Date(dateVoyage).getUTCFullYear();
@@ -106,6 +121,28 @@ async function prochainNumero(prisma, dateVoyage) {
   return `${prefixe}${String(suivant).padStart(6, '0')}`;
 }
 
+// Numéro de série validé : préfixe = zone (Z1→A, Z2→B, Z3→C, Z4→D) suivi
+// d'une séquence indépendante par zone, complétée à 4 chiffres (ex. B3945).
+const PREFIXES_SERIE = { Z1: 'A', Z2: 'B', Z3: 'C', Z4: 'D' };
+
+async function prochainNumeroSerie(prisma, zoneCode) {
+  const prefixe = PREFIXES_SERIE[zoneCode];
+  if (!prefixe) {
+    throw new ApiError(
+      409,
+      'CONFIGURATION_A_VALIDER',
+      `Préfixe du numéro de série non défini pour la zone ${zoneCode} — CONFIGURATION_A_VALIDER`
+    );
+  }
+  const dernier = await prisma.billet.findFirst({
+    where: { numeroSerie: { startsWith: prefixe } },
+    orderBy: { numeroSerie: 'desc' },
+    select: { numeroSerie: true },
+  });
+  const suivant = dernier ? parseInt(dernier.numeroSerie.slice(prefixe.length), 10) + 1 : 1;
+  return `${prefixe}${String(suivant).padStart(4, '0')}`;
+}
+
 // POST /api/billets
 async function creer(donnees, appelant) {
   return dbCall(async () => {
@@ -114,6 +151,7 @@ async function creer(donnees, appelant) {
     verifierIdentite(donnees.classe, donnees.typeIdentite);
     const { gare, montant } = await resoudreTarif(prisma, donnees);
     const train = await verifierTrain(prisma, donnees.trainId, donnees.dateVoyage);
+    const voiture = await verifierVoiture(prisma, donnees.voitureId, donnees.classe);
 
     // Règle J-1 (vente) : sémantique non fournie → REGLE_A_CONFIRMER.
     // Aucune vérification de date n'est appliquée tant que la règle n'est pas
@@ -121,6 +159,7 @@ async function creer(donnees, appelant) {
 
     const donneesCreation = {
       numero: await prochainNumero(prisma, donnees.dateVoyage),
+      numeroSerie: await prochainNumeroSerie(prisma, gare.zone.code),
       voyageurNom: donnees.voyageurNom,
       voyageurIdentite: donnees.voyageurIdentite,
       typeIdentite: donnees.typeIdentite,
@@ -131,7 +170,7 @@ async function creer(donnees, appelant) {
       tarif: montant,
       dateVoyage: new Date(donnees.dateVoyage),
       trainId: train ? train.id : null,
-      voitureId: donnees.voitureId || null,
+      voitureId: voiture ? voiture.id : null,
       place: donnees.place || null,
       creeParId: appelant.id,
     };
@@ -183,6 +222,7 @@ async function modifier(id, donnees, appelant) {
     verifierIdentite(donnees.classe, donnees.typeIdentite);
     const { gare, montant } = await resoudreTarif(prisma, donnees);
     const train = await verifierTrain(prisma, donnees.trainId, donnees.dateVoyage);
+    const voiture = await verifierVoiture(prisma, donnees.voitureId, donnees.classe);
 
     const billet = await prisma.billet.update({
       where: { id },
@@ -197,7 +237,7 @@ async function modifier(id, donnees, appelant) {
         tarif: montant,
         dateVoyage: new Date(donnees.dateVoyage),
         trainId: train ? train.id : null,
-        voitureId: donnees.voitureId || null,
+        voitureId: voiture ? voiture.id : null,
         place: donnees.place || null,
       },
       include: {
@@ -227,6 +267,7 @@ async function lister(req) {
     if (search) {
       where.OR = [
         { numero: { contains: search, mode: 'insensitive' } },
+        { numeroSerie: { contains: search, mode: 'insensitive' } },
         { voyageurNom: { contains: search, mode: 'insensitive' } },
         { voyageurIdentite: { contains: search, mode: 'insensitive' } },
       ];
